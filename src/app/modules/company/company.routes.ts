@@ -5,21 +5,18 @@ import { CompanySchemas } from "./company.schemas";
 
 const router = Router();
 
+// Create company
 router.post(
   "/",
   payloadValidator(CompanySchemas.createCompany),
   CompanyControllers.createCompany
 );
 
-
-router.get("/");
-
-router.post("/upload-logo");
-
-router.get("/:id");
-
-router.put("/:id", payloadValidator(CompanySchemas.updateCompany));
-
-router.delete("/:id");
+// TODO: Implement these routes
+// router.get("/");
+// router.post("/upload-logo");
+// router.get("/:id");
+// router.put("/:id", payloadValidator(CompanySchemas.updateCompany));
+// router.delete("/:id");
 
 export const CompanyRoutes = router;
