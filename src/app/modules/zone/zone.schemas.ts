@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const zoneSchema = z.object({
+const createZoneSchema = z.object({
   body: z.object({
     warehouse: z
       .uuid({ message: "Invalid warehouse selection" })
@@ -51,7 +51,7 @@ const updateZoneSchema = z.object({
   }),
 });
 
-export const zonesSchemas = {
-  zoneSchema,
+export const zoneSchemas = {
+  createZoneSchema,
   updateZoneSchema,
 };

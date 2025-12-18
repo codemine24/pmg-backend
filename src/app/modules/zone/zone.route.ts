@@ -1,13 +1,13 @@
 import { Router } from "express";
 import payloadValidator from "../../middleware/payload-validator";
-import { zonesSchemas } from "./zone.schemas";
+import { zoneSchemas } from "./zone.schemas";
 
 const router = Router();
 
 // Create zone
 router.post(
   "/",
-  payloadValidator(zonesSchemas.zoneSchema),
+  payloadValidator(zoneSchemas.createZoneSchema),
 );
 
 // Get all zones
@@ -17,7 +17,7 @@ router.get("/")
 router.get("/:id")
 
 // Update zone
-router.patch("/:id", payloadValidator(zonesSchemas.updateZoneSchema));
+router.patch("/:id", payloadValidator(zoneSchemas.updateZoneSchema));
 
 // Delete zone
 router.delete("/:id");
