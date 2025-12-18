@@ -18,7 +18,6 @@ import {
 // ============================================================
 // Enums
 // ============================================================
-
 export const userRoleEnum = pgEnum('user_role', [
   'ADMIN', // Platform Admin (Agency/Operator)
   'LOGISTICS', // Logistics Staff (Fulfillment Partner)
@@ -73,20 +72,33 @@ export const discrepancyReasonEnum = pgEnum('discrepancy_reason', [
   'OTHER',
 ])
 
-// ============================================================
-// Level 1: Platform (Root Tenant)
-// ============================================================
+
+// ---------------------------------- PLATFORM -------------------------------------------
+// Config structure:
+// {
+//   "logo_url": "https://...",
+//   "primary_color": "#000000",
+//   "secondary_color": "#ffffff",
+//   "logistics_partner_name": "A2 Logistics",
+//   "support_email": "support@platform.com",
+//   "currency": "AED"
+// }
+
+// Features structure:
+// {
+//   "collections": true,
+//   "bulk_import": true,
+//   "advanced_reporting": false,
+//   "api_access": false
+// }
 
 export const platforms = pgTable(
   'platforms',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name', { length: 100 }).notNull(),
-    // The primary domain for admin/warehouse access (e.g., 'pmg-platform.com')
     domain: varchar('domain', { length: 100 }).notNull().unique(),
-    // Platform configuration (logo, colors, partner names)
     config: jsonb('config').default({}).notNull(),
-    // Feature flags (collections, api_access, etc.)
     features: jsonb('features').default({}).notNull(),
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -104,37 +116,105 @@ export const platformsRelations = relations(platforms, ({ many }) => ({
   pricingTiers: many(pricingTiers),
 }))
 
-// ============================================================
-// Level 2: Core Identity & Access
-// ============================================================
+// ---------------------------------- COMPANY & COMPANY DOMAINS ---------------------------
+// Settings structure:
+// {
+//   "branding": {
+//     "title": "Diageo",
+//     "logo_url": "https://...",
+//     "primary_color": "#000000",
+//     "secondary_color": "#ffffff"
+//   }
+// }
 
-export const users = pgTable(
-  'users',
+export const companies = pgTable(
+  'companies',
   {
-    // Keeping ID as text to maintain compatibility with standard Auth adapters
-    id: text('id').primaryKey(),
-    // Multi-tenancy: Users belong to a platform
+    id: uuid('id').primaryKey().defaultRandom(),
     platform: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    // Multi-tenancy: Client users belong to a company, Admin/Logistics are null
-    company: uuid('company').references(() => companies.id),
-    
-    name: text('name').notNull(),
-    email: text('email').notNull(), // Uniqueness handled by composite index below
-    emailVerified: boolean('email_verified').default(false).notNull(),
-    image: text('image'),
-    
-    // RBAC
+    name: varchar('name', { length: 100 }).notNull(),
+    domain: varchar('domain', { length: 50 }).notNull(), // Subdomain
+    settings: jsonb('settings').default({}).notNull(),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deleted_at: timestamp('deleted_at'),
+  },
+  (table) => [
+    index('companies_platform_idx').on(table.platform),
+    unique('companies_platform_domain_unique').on(table.platform, table.domain), // Domain must be unique within a platform
+  ]
+)
+
+export const companyDomains = pgTable(
+  'company_domains',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    company: uuid('company')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    hostname: text('hostname').notNull().unique(), // e.g., 'client.diageo.com' or 'diageo.pmg-platform.com'
+    type: varchar('type', { length: 30 }).notNull(), // 'vanity_subdomain' | 'custom_domain'
+    isVerified: boolean('is_verified').default(false),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+  },
+  (table) => [index('company_domains_hostname_idx').on(table.hostname)]
+)
+
+export const companiesRelations = relations(companies, ({ one, many }) => ({
+  platform: one(platforms, {
+    fields: [companies.platform],
+    references: [platforms.id],
+  }),
+  domains: many(companyDomains),
+  brands: many(brands),
+  zones: many(zones),
+  assets: many(assets),
+  collections: many(collections),
+  orders: many(orders),
+  users: many(users),
+}))
+
+export const companyDomainsRelations = relations(companyDomains, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyDomains.company],
+    references: [companies.id],
+  }),
+  platform: one(platforms, {
+    fields: [companyDomains.platform],
+    references: [platforms.id],
+  }),
+}))
+
+// ---------------------------------- USER ------------------------------------------------
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    company: uuid('company').references(() => companies.id), // Multi-tenancy: Client users belong to a company, Admin/Logistics are null
+    name: varchar('name', { length: 100 }).notNull(),
+    email: varchar('email', { length: 255 }).notNull(),
+    password: varchar('password', { length: 255 }).notNull(), // hashed password
     role: userRoleEnum('role').notNull().default('CLIENT'),
     permissions: text('permissions')
       .array()
       .notNull()
       .default(sql`ARRAY[]::text[]`),
-    
+    permission_template: varchar('permission_template', { length: 50 }), // PLATFORM_ADMIN, LOGISTICS_STAFF, CLIENT_USER
     isActive: boolean('is_active').notNull().default(true),
     lastLoginAt: timestamp('last_login_at'),
-    deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at')
       .$onUpdate(() => new Date())
@@ -147,6 +227,310 @@ export const users = pgTable(
     uniqueIndex('user_platform_email_unique').on(table.platform, table.email),
   ]
 )
+
+// ---------------------------------- BRAND -----------------------------------------------
+export const brands = pgTable(
+  'brands',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+        .notNull()
+        .references(() => platforms.id, { onDelete: 'cascade' }),
+    company: uuid('company')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 100 }).notNull(),
+    description: text('description'),
+    logoUrl: text('logo_url'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    unique('brands_company_name_unique').on(table.company, table.name),
+  ]
+)
+
+export const brandsRelations = relations(brands, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [brands.company],
+    references: [companies.id],
+  }),
+  assets: many(assets),
+  collections: many(collections),
+}))
+
+// ---------------------------------- WAREHOUSE -------------------------------------------
+export const warehouses = pgTable(
+  'warehouses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 100 }).notNull(),
+    country: varchar('country', { length: 50 }).notNull(),
+    city: varchar('city', { length: 50 }).notNull(),
+    address: text('address').notNull(),
+    coordinates: jsonb('coordinates'), // GPS coordinates {lat, lng}
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    unique('warehouses_platform_name_unique').on(table.platform, table.name),
+  ]
+)
+
+// ---------------------------------- ZONES -----------------------------------------------
+export const zones = pgTable(
+  'zones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+        .notNull()
+        .references(() => platforms.id, { onDelete: 'cascade' }),
+    warehouse: uuid('warehouse')
+      .notNull()
+      .references(() => warehouses.id),
+    company: uuid('company')
+      .notNull()
+      .references(() => companies.id),
+    name: varchar('name', { length: 50 }).notNull(),
+    description: text('description'),
+    capacity: integer('capacity'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    unique('zones_warehouse_company_name_unique').on(
+      table.warehouse,
+      table.company,
+      table.name
+    ),
+  ]
+)
+
+// ---------------------------------- ASSET -----------------------------------------------
+export const assets = pgTable(
+  'assets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    company: uuid('company')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    warehouse: uuid('warehouse')
+      .notNull()
+      .references(() => warehouses.id),
+    zone: uuid('zone')
+      .notNull()
+      .references(() => zones.id),
+    brand: uuid('brand').references(() => brands.id),
+    name: varchar('name', { length: 200 }).notNull(),
+    description: text('description'),
+    category: varchar('category', { length: 100 }).notNull(), // TODO
+    images: text('images')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+    trackingMethod: trackingMethodEnum('tracking_method').notNull(),
+    totalQuantity: integer('total_quantity').notNull().default(1),
+    availableQuantity: integer('available_quantity').notNull().default(1),
+    qrCode: varchar('qr_code', { length: 100 }).notNull().unique(),
+    packaging: varchar('packaging', { length: 100 }),
+    weightPerUnit: decimal('weight_per_unit', { precision: 8, scale: 2 }).notNull(), // in kilograms
+    dimensions: jsonb('dimensions').default({}).notNull(), // {length, width, height} in cm
+    volumePerUnit: decimal('volume_per_unit', { precision: 8, scale: 3 }).notNull(), // in cubic meters
+    condition: conditionEnum('condition').notNull().default('GREEN'),
+    conditionNotes: text('condition_notes'),
+    refurbDaysEstimate: integer('refurb_days_estimate'), // Estimated days until available (for Red condition)
+    conditionHistory: jsonb('condition_history').default([]),
+    handlingTags: text('handling_tags')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+    status: assetStatusEnum('status').notNull().default('AVAILABLE'),
+    lastScannedAt: timestamp('last_scanned_at'),
+    lastScannedBy: uuid('last_scanned_by').references(() => users.id),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => [
+    index('assets_platform_idx').on(table.platform),
+    index('assets_company_idx').on(table.company),
+    index('assets_qr_code_idx').on(table.qrCode),
+  ]
+)
+
+// ---------------------------------- COLLECTION ------------------------------------------
+export const collections = pgTable(
+  'collections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    company: uuid('company')
+      .notNull()
+      .references(() => companies.id),
+    brand: uuid('brand').references(() => brands.id),
+    name: varchar('name', { length: 200 }).notNull(),
+    description: text('description'),
+    images: text('images')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+    category: varchar('category', { length: 50 }),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => [
+    index('collections_company_idx').on(table.company),
+  ]
+)
+
+// ---------------------------------- COLLECTION ITEM --------------------------------------
+export const collectionItems = pgTable(
+  'collection_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    collection: uuid('collection')
+      .notNull()
+      .references(() => collections.id, { onDelete: 'cascade' }),
+    asset: uuid('asset')
+      .notNull()
+      .references(() => assets.id),
+    defaultQuantity: integer('default_quantity').notNull().default(1),
+    notes: text('notes'),
+    displayOrder: integer('display_order'), // Sort order in collection
+    createdAt: timestamp('created_at').notNull().defaultNow(), 
+  },
+  (table) => [
+    unique('collection_items_unique').on(table.collection, table.asset),
+  ]
+)
+
+// ---------------------------------- PRICING TIER -----------------------------------------
+export const pricingTiers = pgTable(
+  'pricing_tiers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    country: varchar('country', { length: 50 }).notNull(),
+    city: varchar('city', { length: 50 }).notNull(),
+    volumeMin: decimal('volume_min', { precision: 8, scale: 3 }).notNull(),
+    volumeMax: decimal('volume_max', { precision: 8, scale: 3 }),
+    basePrice: decimal('base_price', { precision: 10, scale: 2 }).notNull(),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('pricing_tiers_platform_location_idx').on(
+      table.platform,
+      table.country,
+      table.city
+    ),
+    unique('pricing_tiers_unique').on(table.platform, table.country, table.city, table.volumeMin, table.volumeMax),
+  ]
+)
+
+// ---------------------------------- PRICING TIER -----------------------------------------
+export const orders = pgTable(
+  'orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    // Unique ID per platform (ORD-2024...)
+    orderId: varchar('order_id', { length: 50 }).notNull(),
+    
+    company: uuid('company')
+      .notNull()
+      .references(() => companies.id),
+    brand: uuid('brand').references(() => brands.id),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    
+    // Contact & Venue
+    contactName: varchar('contact_name', { length: 255 }),
+    contactEmail: varchar('contact_email', { length: 255 }),
+    contactPhone: varchar('contact_phone', { length: 50 }),
+    eventStartDate: timestamp('event_start_date', { mode: 'date' }),
+    eventEndDate: timestamp('event_end_date', { mode: 'date' }),
+    venueName: varchar('venue_name', { length: 255 }),
+    venueCountry: varchar('venue_country', { length: 100 }),
+    venueCity: varchar('venue_city', { length: 100 }),
+    venueAddress: text('venue_address'),
+    venueAccessNotes: text('venue_access_notes'),
+    specialInstructions: text('special_instructions'),
+    
+    // Calculations
+    calculatedVolume: decimal('calculated_volume', { precision: 10, scale: 3 }).default('0'),
+    calculatedWeight: decimal('calculated_weight', { precision: 10, scale: 2 }).default('0'),
+    pricingTier: uuid('pricing_tier').references(() => pricingTiers.id),
+    
+    // Financials (JSONB used for snapshots)
+    logisticsPricing: jsonb('logistics_pricing'), // { base, adjusted, reason... }
+    platformPricing: jsonb('platform_pricing'), // { margin%, amount... }
+    finalPricing: jsonb('final_pricing'), // { total }
+    
+    // Invoicing
+    invoiceNumber: varchar('invoice_number', { length: 100 }),
+    invoiceGeneratedAt: timestamp('invoice_generated_at'),
+    invoicePdfUrl: varchar('invoice_pdf_url', { length: 500 }),
+    invoicePaidAt: timestamp('invoice_paid_at'),
+    
+    // Delivery
+    deliveryWindowStart: timestamp('delivery_window_start'),
+    deliveryWindowEnd: timestamp('delivery_window_end'),
+    pickupWindowStart: timestamp('pickup_window_start'),
+    pickupWindowEnd: timestamp('pickup_window_end'),
+    truckPhotos: text('truck_photos').array().default(sql`ARRAY[]::text[]`),
+    
+    jobNumber: varchar('job_number', { length: 100 }),
+    
+    status: orderStatusEnum('status').notNull().default('DRAFT'),
+    financialStatus: financialStatusEnum('financial_status').notNull().default('PENDING_QUOTE'),
+    
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => [
+    // Order ID unique per platform
+    unique('orders_platform_id_unique').on(table.platform, table.orderId),
+    index('orders_platform_company_idx').on(table.platform, table.company),
+    index('orders_status_idx').on(table.status),
+  ]
+)
+
+// ============================================================
+// Level 2: Core Identity & Access
+// ============================================================
+
+
 
 // Standard Auth Tables (Session, Account, Verification)
 export const session = pgTable(
@@ -220,207 +604,19 @@ export const userRelations = relations(users, ({ one, many }) => ({
 // Level 3: Companies & Domains
 // ============================================================
 
-export const companies = pgTable(
-  'companies',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    // Multi-tenancy: Belongs to a platform
-    platform: uuid('platform')
-      .notNull()
-      .references(() => platforms.id, { onDelete: 'cascade' }),
-    
-    name: varchar('name', { length: 255 }).notNull(),
-    // Internal subdomain identifier (e.g., 'diageo' in 'diageo.pmg.com')
-    domain: varchar('domain', { length: 50 }).notNull(), 
-    
-    description: text('description'),
-    
-    // Company-specific settings (branding, colors) - as per SRS
-    settings: jsonb('settings').default({}).notNull(),
-    
-    contactEmail: varchar('contact_email', { length: 255 }),
-    contactPhone: varchar('contact_phone', { length: 50 }),
-    
-    isActive: boolean('is_active').default(true).notNull(),
-    archivedAt: timestamp('archived_at'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    index('companies_platform_idx').on(table.platform),
-    // Domain must be unique within a platform
-    unique('companies_platform_domain_unique').on(table.platform, table.domain),
-  ]
-)
-
 // New Table: Map custom hostnames to companies (for pre-login branding)
-export const companyDomains = pgTable(
-  'company_domains',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-      .notNull()
-      .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company')
-      .notNull()
-      .references(() => companies.id, { onDelete: 'cascade' }),
-    
-    // e.g., 'client.diageo.com' or 'diageo.pmg-platform.com'
-    hostname: text('hostname').notNull().unique(),
-    
-    type: varchar('type', { length: 30 }).notNull(), // 'vanity_subdomain' | 'custom_domain'
-    isVerified: boolean('is_verified').default(false),
-    isActive: boolean('is_active').default(true),
-    
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
-  },
-  (table) => [index('company_domains_hostname_idx').on(table.hostname)]
-)
 
-export const companiesRelations = relations(companies, ({ one, many }) => ({
-  platform: one(platforms, {
-    fields: [companies.platform],
-    references: [platforms.id],
-  }),
-  domains: many(companyDomains),
-  brands: many(brands),
-  zones: many(zones),
-  assets: many(assets),
-  collections: many(collections),
-  orders: many(orders),
-  users: many(users),
-}))
 
-export const companyDomainsRelations = relations(companyDomains, ({ one }) => ({
-  company: one(companies, {
-    fields: [companyDomains.company],
-    references: [companies.id],
-  }),
-  platform: one(platforms, {
-    fields: [companyDomains.platform],
-    references: [platforms.id],
-  }),
-}))
-
-export const brands = pgTable(
-  'brands',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    // Denormalized platform for easy scoping
-    platform: uuid('platform')
-        .notNull()
-        .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company')
-      .notNull()
-      .references(() => companies.id, { onDelete: 'cascade' }),
-    name: varchar('name', { length: 255 }).notNull(),
-    description: text('description'),
-    logoUrl: varchar('logo_url', { length: 500 }),
-    deletedAt: timestamp('deleted_at'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    unique('brands_company_name_unique').on(table.company, table.name),
-  ]
-)
-
-export const brandsRelations = relations(brands, ({ one, many }) => ({
-  company: one(companies, {
-    fields: [brands.company],
-    references: [companies.id],
-  }),
-  assets: many(assets),
-  collections: many(collections),
-}))
 
 // ============================================================
 // Level 4: Shared Resources (Warehouses, Pricing)
 // ============================================================
 
-export const warehouses = pgTable(
-  'warehouses',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-      .notNull()
-      .references(() => platforms.id, { onDelete: 'cascade' }),
-    name: varchar('name', { length: 255 }).notNull(),
-    country: varchar('country', { length: 100 }).notNull(),
-    city: varchar('city', { length: 100 }).notNull(),
-    address: text('address').notNull(),
-    archivedAt: timestamp('archived_at'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    unique('warehouses_platform_name_unique').on(table.platform, table.name),
-  ]
-)
 
-export const zones = pgTable(
-  'zones',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-        .notNull()
-        .references(() => platforms.id, { onDelete: 'cascade' }),
-    warehouse: uuid('warehouse')
-      .notNull()
-      .references(() => warehouses.id),
-    company: uuid('company')
-      .notNull()
-      .references(() => companies.id),
-    name: varchar('name', { length: 100 }).notNull(),
-    description: text('description'),
-    deletedAt: timestamp('deleted_at'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    unique('zones_warehouse_company_name_unique').on(
-      table.warehouse,
-      table.company,
-      table.name
-    ),
-  ]
-)
 
-export const pricingTiers = pgTable(
-  'pricing_tiers',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-      .notNull()
-      .references(() => platforms.id, { onDelete: 'cascade' }),
-    country: varchar('country', { length: 100 }).notNull(),
-    city: varchar('city', { length: 100 }).notNull(),
-    volumeMin: decimal('volume_min', { precision: 10, scale: 3 }).notNull(),
-    volumeMax: decimal('volume_max', { precision: 10, scale: 3 }).notNull(),
-    basePrice: decimal('base_price', { precision: 10, scale: 2 }).notNull(),
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    index('pricing_tiers_platform_location_idx').on(
-      table.platform,
-      table.country,
-      table.city
-    ),
-  ]
-)
+
+
+
 
 export const warehousesRelations = relations(warehouses, ({ one, many }) => ({
     platform: one(platforms, {
@@ -447,190 +643,17 @@ export const zonesRelations = relations(zones, ({ one, many }) => ({
 // Level 5: Inventory (Assets & Collections)
 // ============================================================
 
-export const assets = pgTable(
-  'assets',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    // Denormalized platform for scoping efficiency
-    platform: uuid('platform')
-      .notNull()
-      .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company')
-      .notNull()
-      .references(() => companies.id, { onDelete: 'cascade' }),
-    brand: uuid('brand').references(() => brands.id),
-    warehouse: uuid('warehouse')
-      .notNull()
-      .references(() => warehouses.id),
-    zone: uuid('zone')
-      .notNull()
-      .references(() => zones.id),
-    
-    name: varchar('name', { length: 255 }).notNull(),
-    description: text('description'),
-    category: varchar('category', { length: 100 }).notNull(),
-    images: text('images')
-      .array()
-      .notNull()
-      .default(sql`ARRAY[]::text[]`),
-    
-    trackingMethod: trackingMethodEnum('tracking_method').notNull(),
-    totalQuantity: integer('total_quantity').notNull().default(1),
-    
-    // Global opaque unique token
-    qrCode: varchar('qr_code', { length: 255 }).notNull().unique(),
-    
-    packaging: varchar('packaging', { length: 255 }),
-    weight: decimal('weight', { precision: 10, scale: 2 }).notNull(),
-    dimensionLength: decimal('dimension_length', { precision: 10, scale: 2 }).notNull(),
-    dimensionWidth: decimal('dimension_width', { precision: 10, scale: 2 }).notNull(),
-    dimensionHeight: decimal('dimension_height', { precision: 10, scale: 2 }).notNull(),
-    volume: decimal('volume', { precision: 10, scale: 3 }).notNull(),
-    
-    condition: conditionEnum('condition').notNull().default('GREEN'),
-    status: assetStatusEnum('status').notNull().default('AVAILABLE'),
-    refurbDaysEstimate: integer('refurb_days_estimate'),
-    handlingTags: text('handling_tags')
-      .array()
-      .notNull()
-      .default(sql`ARRAY[]::text[]`),
-    
-    lastScannedAt: timestamp('last_scanned_at'),
-    lastScannedBy: text('last_scanned_by').references(() => users.id),
-    
-    deletedAt: timestamp('deleted_at'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    index('assets_platform_idx').on(table.platform),
-    index('assets_company_idx').on(table.company),
-    index('assets_qr_code_idx').on(table.qrCode),
-  ]
-)
 
-export const collections = pgTable(
-  'collections',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-      .notNull()
-      .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company')
-      .notNull()
-      .references(() => companies.id),
-    brand: uuid('brand').references(() => brands.id),
-    name: varchar('name', { length: 255 }).notNull(),
-    description: text('description'),
-    images: text('images')
-      .array()
-      .notNull()
-      .default(sql`ARRAY[]::text[]`),
-    category: varchar('category', { length: 100 }),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
-    deletedAt: timestamp('deleted_at'),
-  },
-  (table) => [
-    index('collections_company_idx').on(table.company),
-  ]
-)
 
-export const collectionItems = pgTable(
-  'collection_items',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    collection: uuid('collection')
-      .notNull()
-      .references(() => collections.id, { onDelete: 'cascade' }),
-    asset: uuid('asset')
-      .notNull()
-      .references(() => assets.id),
-    defaultQuantity: integer('default_quantity').notNull().default(1),
-    notes: text('notes'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-  },
-  (table) => [
-    unique('collection_items_unique').on(table.collection, table.asset),
-  ]
-)
+
+
+
 
 // ============================================================
 // Level 6: Orders & Operations
 // ============================================================
 
-export const orders = pgTable(
-  'orders',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-      .notNull()
-      .references(() => platforms.id, { onDelete: 'cascade' }),
-    // Unique ID per platform (ORD-2024...)
-    orderId: varchar('order_id', { length: 50 }).notNull(),
-    
-    company: uuid('company')
-      .notNull()
-      .references(() => companies.id),
-    brand: uuid('brand').references(() => brands.id),
-    userId: text('user_id')
-      .notNull()
-      .references(() => users.id),
-    
-    // Contact & Venue
-    contactName: varchar('contact_name', { length: 255 }),
-    contactEmail: varchar('contact_email', { length: 255 }),
-    contactPhone: varchar('contact_phone', { length: 50 }),
-    eventStartDate: timestamp('event_start_date', { mode: 'date' }),
-    eventEndDate: timestamp('event_end_date', { mode: 'date' }),
-    venueName: varchar('venue_name', { length: 255 }),
-    venueCountry: varchar('venue_country', { length: 100 }),
-    venueCity: varchar('venue_city', { length: 100 }),
-    venueAddress: text('venue_address'),
-    venueAccessNotes: text('venue_access_notes'),
-    specialInstructions: text('special_instructions'),
-    
-    // Calculations
-    calculatedVolume: decimal('calculated_volume', { precision: 10, scale: 3 }).default('0'),
-    calculatedWeight: decimal('calculated_weight', { precision: 10, scale: 2 }).default('0'),
-    pricingTier: uuid('pricing_tier').references(() => pricingTiers.id),
-    
-    // Financials (JSONB used for snapshots)
-    logisticsPricing: jsonb('logistics_pricing'), // { base, adjusted, reason... }
-    platformPricing: jsonb('platform_pricing'), // { margin%, amount... }
-    finalPricing: jsonb('final_pricing'), // { total }
-    
-    // Invoicing
-    invoiceNumber: varchar('invoice_number', { length: 100 }),
-    invoiceGeneratedAt: timestamp('invoice_generated_at'),
-    invoicePdfUrl: varchar('invoice_pdf_url', { length: 500 }),
-    invoicePaidAt: timestamp('invoice_paid_at'),
-    
-    // Delivery
-    deliveryWindowStart: timestamp('delivery_window_start'),
-    deliveryWindowEnd: timestamp('delivery_window_end'),
-    pickupWindowStart: timestamp('pickup_window_start'),
-    pickupWindowEnd: timestamp('pickup_window_end'),
-    truckPhotos: text('truck_photos').array().default(sql`ARRAY[]::text[]`),
-    
-    jobNumber: varchar('job_number', { length: 100 }),
-    
-    status: orderStatusEnum('status').notNull().default('DRAFT'),
-    financialStatus: financialStatusEnum('financial_status').notNull().default('PENDING_QUOTE'),
-    
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
-    deletedAt: timestamp('deleted_at'),
-  },
-  (table) => [
-    // Order ID unique per platform
-    unique('orders_platform_id_unique').on(table.platform, table.orderId),
-    index('orders_platform_company_idx').on(table.platform, table.company),
-    index('orders_status_idx').on(table.status),
-  ]
-)
+
 
 export const orderItems = pgTable(
   'order_items',
