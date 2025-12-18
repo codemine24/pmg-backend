@@ -47,7 +47,7 @@ const updateBrandSchema = z.object({
         .url("Invalid logo URL")
         .optional()
         .or(z.literal("")),
-      isActive: z.boolean().default(true),
+      isActive: z.boolean().optional(),
     })
 })
 
