@@ -28,6 +28,7 @@ export const trackingMethodEnum = pgEnum('tracking_method', [
   'INDIVIDUAL',
   'BATCH',
 ])
+
 export const conditionEnum = pgEnum('condition', ['GREEN', 'ORANGE', 'RED'])
 export const assetStatusEnum = pgEnum('asset_status', [
   'AVAILABLE',
