@@ -1,10 +1,21 @@
 import httpStatus from "http-status";
 import catchAsync from "../../shared/catch-async";
 import sendResponse from "../../shared/send-response";
-import { PlatformServices } from "../platform/platform.services";
+import { UserServices } from "./user.services";
 
+// ----------------------------------- CREATE USER ------------------------------------
 const createUser = catchAsync(async (req, res, next) => {
-  const result = await PlatformServices.createPlatform(req.body);
+  // Extract platform ID from header
+  const platformId = req.headers['x-platform'] as string;
+  
+  // Merge platform ID with request body
+  const userData = {
+    ...req.body,
+    platform: platformId,
+  };
+  
+  const result = await UserServices.createUser(userData);
+  
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,

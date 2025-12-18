@@ -5,13 +5,20 @@ import config from "../../config";
 
 // ----------------------------------- CREATE USER ------------------------------------
 const createUser = async (data: any) => {
+  // Hash the password
   const hashedPassword = await bcrypt.hash(
     data.password,
     config.salt_rounds
   );
 
-  const result = await db.insert(users).values(data).returning();
-  return result;
+  // Prepare user data with hashed password
+  const userData = {
+    ...data,
+    password: hashedPassword,
+  };
+
+  const result = await db.insert(users).values(userData).returning();
+  return result[0];
 };
 
 export const UserServices = {
