@@ -454,77 +454,125 @@ export const pricingTiers = pgTable(
   ]
 )
 
-// ---------------------------------- PRICING TIER -----------------------------------------
+// ---------------------------------- ORDER ------------------------------------------------
 export const orders = pgTable(
   'orders',
   {
+    // Core identifiers
     id: uuid('id').primaryKey().defaultRandom(),
     platform: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    // Unique ID per platform (ORD-2024...)
-    orderId: varchar('order_id', { length: 50 }).notNull(),
-    
+    orderId: varchar('order_id', { length: 20 }).notNull(), // Human-readable ID (ORD-YYYYMMDD-XXX)
     company: uuid('company')
       .notNull()
       .references(() => companies.id),
     brand: uuid('brand').references(() => brands.id),
-    userId: text('user_id')
+    userId: uuid('user_id')
       .notNull()
       .references(() => users.id),
+    jobNumber: varchar('job_number', { length: 50 }),
     
-    // Contact & Venue
-    contactName: varchar('contact_name', { length: 255 }),
-    contactEmail: varchar('contact_email', { length: 255 }),
-    contactPhone: varchar('contact_phone', { length: 50 }),
-    eventStartDate: timestamp('event_start_date', { mode: 'date' }),
-    eventEndDate: timestamp('event_end_date', { mode: 'date' }),
-    venueName: varchar('venue_name', { length: 255 }),
-    venueCountry: varchar('venue_country', { length: 100 }),
-    venueCity: varchar('venue_city', { length: 100 }),
-    venueAddress: text('venue_address'),
-    venueAccessNotes: text('venue_access_notes'),
+    // Contact information
+    contactName: varchar('contact_name', { length: 100 }).notNull(),
+    contactEmail: varchar('contact_email', { length: 255 }).notNull(),
+    contactPhone: varchar('contact_phone', { length: 50 }).notNull(),
+    
+    // Event details
+    eventStartDate: timestamp('event_start_date', { mode: 'date' }).notNull(),
+    eventEndDate: timestamp('event_end_date', { mode: 'date' }).notNull(),
+    venueName: varchar('venue_name', { length: 200 }).notNull(),
+    venueLocation: jsonb('venue_location').notNull(), // {country, city, address, access_notes}
     specialInstructions: text('special_instructions'),
     
-    // Calculations
-    calculatedVolume: decimal('calculated_volume', { precision: 10, scale: 3 }).default('0'),
-    calculatedWeight: decimal('calculated_weight', { precision: 10, scale: 2 }).default('0'),
-    pricingTier: uuid('pricing_tier').references(() => pricingTiers.id),
+    // Logistics windows
+    deliveryWindow: jsonb('delivery_window'), // {start, end} datetime
+    pickupWindow: jsonb('pickup_window'), // {start, end} datetime
     
-    // Financials (JSONB used for snapshots)
-    logisticsPricing: jsonb('logistics_pricing'), // { base, adjusted, reason... }
-    platformPricing: jsonb('platform_pricing'), // { margin%, amount... }
-    finalPricing: jsonb('final_pricing'), // { total }
+    // Calculations
+    calculatedTotals: jsonb('calculated_totals').notNull(), // {volume, weight} totals
+    
+    // Pricing
+    tier_id: uuid('tier').references(() => pricingTiers.id),
+    logisticsPricing: jsonb('logistics_pricing'), // {base_price, adjusted_price, adjustment_reason, adjusted_at, adjusted_by}
+    platformPricing: jsonb('platform_pricing'), // {margin_percent, margin_amount, reviewed_at, reviewed_by, notes}
+    finalPricing: jsonb('final_pricing'), // {total_price, quote_sent_at}
     
     // Invoicing
-    invoiceNumber: varchar('invoice_number', { length: 100 }),
+    invoiceId: varchar('invoice_id', { length: 30 }), // TODO: reference
     invoiceGeneratedAt: timestamp('invoice_generated_at'),
-    invoicePdfUrl: varchar('invoice_pdf_url', { length: 500 }),
     invoicePaidAt: timestamp('invoice_paid_at'),
+    paymentMethod: varchar('payment_method', { length: 50 }),
+    paymentReference: varchar('payment_reference', { length: 100 }),
     
-    // Delivery
-    deliveryWindowStart: timestamp('delivery_window_start'),
-    deliveryWindowEnd: timestamp('delivery_window_end'),
-    pickupWindowStart: timestamp('pickup_window_start'),
-    pickupWindowEnd: timestamp('pickup_window_end'),
-    truckPhotos: text('truck_photos').array().default(sql`ARRAY[]::text[]`),
-    
-    jobNumber: varchar('job_number', { length: 100 }),
-    
-    status: orderStatusEnum('status').notNull().default('DRAFT'),
+    // Status tracking
+    orderStatus: orderStatusEnum('order_status').notNull().default('DRAFT'),
     financialStatus: financialStatusEnum('financial_status').notNull().default('PENDING_QUOTE'),
+    orderStatusHistory: jsonb('order_status_history').default('[]'),
+    financialStatusHistory: jsonb('financial_status_history').default('[]'),
     
+    // Scanning & photos
+    scanningData: jsonb('scanning_data').default('{}'), // {scanned_out: [], scanned_in: []}
+    deliveryPhotos: text('delivery_photos').array().default(sql`ARRAY[]::text[]`),
+    
+    // Timestamps
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
     deletedAt: timestamp('deleted_at'),
   },
   (table) => [
     // Order ID unique per platform
-    unique('orders_platform_id_unique').on(table.platform, table.orderId),
+    unique('orders_platform_order_id_unique').on(table.platform, table.orderId),
+    // Invoice ID unique per platform when not null
+    unique('orders_platform_invoice_id_unique').on(table.platform, table.invoiceId),
+    
+    // Indexes for performance
     index('orders_platform_company_idx').on(table.platform, table.company),
-    index('orders_status_idx').on(table.status),
+    index('orders_status_idx').on(table.orderStatus),
+    index('orders_financial_status_idx').on(table.financialStatus),
+    index('orders_event_date_idx').on(table.eventStartDate),
+    index('orders_created_at_idx').on(table.createdAt),
   ]
-)
+);
+
+// ---------------------------------- ORDER ITEM -------------------------------------------
+export const orderItems = pgTable(
+  'order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    platform: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    order: uuid('order')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    asset: uuid('asset')
+      .notNull()
+      .references(() => assets.id),
+    
+    // Snapshot data
+    assetName: varchar('asset_name', { length: 200 }).notNull(),
+    quantity: integer('quantity').notNull(),
+    volumePerUnit: decimal('volume_per_unit', { precision: 8, scale: 3 }).notNull(),
+    weightPerUnit: decimal('weight_per_unit', { precision: 8, scale: 2 }).notNull(),
+    totalVolume: decimal('total_volume', { precision: 8, scale: 3 }).notNull(),
+    totalWeight: decimal('total_weight', { precision: 8, scale: 2 }).notNull(),
+    conditionNotes: text('condition_notes'),
+    handlingTags: text('handling_tags').array().default(sql`ARRAY[]::text[]`),
+    
+    fromCollection: uuid('from_collection').references(() => collections.id),
+    fromCollectionName: varchar('from_collection_name', { length: 200 }),
+    
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    // Indexes for performance
+    index('order_items_order_idx').on(table.order),
+    index('order_items_asset_idx').on(table.asset),
+    index('order_items_platform_idx').on(table.platform),
+    index('order_items_from_collection_idx').on(table.fromCollection),
+  ]
+);
 
 // ============================================================
 // Level 2: Core Identity & Access
@@ -653,39 +701,6 @@ export const zonesRelations = relations(zones, ({ one, many }) => ({
 // Level 6: Orders & Operations
 // ============================================================
 
-
-
-export const orderItems = pgTable(
-  'order_items',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-        .notNull()
-        .references(() => platforms.id, { onDelete: 'cascade' }),
-    order: uuid('order')
-      .notNull()
-      .references(() => orders.id, { onDelete: 'cascade' }),
-    asset: uuid('asset')
-      .notNull()
-      .references(() => assets.id),
-    
-    // Snapshot data
-    assetName: varchar('asset_name', { length: 255 }).notNull(),
-    quantity: integer('quantity').notNull(),
-    volume: decimal('volume', { precision: 10, scale: 3 }).notNull(),
-    weight: decimal('weight', { precision: 10, scale: 2 }).notNull(),
-    totalVolume: decimal('total_volume', { precision: 10, scale: 3 }).notNull(),
-    totalWeight: decimal('total_weight', { precision: 10, scale: 2 }).notNull(),
-    condition: conditionEnum('condition').notNull(),
-    handlingTags: text('handling_tags').array().default(sql`ARRAY[]::text[]`),
-    
-    fromCollection: uuid('from_collection').references(() => collections.id),
-    fromCollectionName: varchar('from_collection_name', { length: 255 }),
-    
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-  }
-)
-
 export const assetBookings = pgTable(
   'asset_bookings',
   {
@@ -751,7 +766,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     platform: one(platforms, { fields: [orders.platform], references: [platforms.id] }),
     company: one(companies, { fields: [orders.company], references: [companies.id] }),
     user: one(users, { fields: [orders.userId], references: [users.id] }),
-    pricingTier: one(pricingTiers, { fields: [orders.pricingTier], references: [pricingTiers.id] }),
+    pricingTier: one(pricingTiers, { fields: [orders.tier_id], references: [pricingTiers.id] }),
     items: many(orderItems),
     scanEvents: many(scanEvents),
     assetBookings: many(assetBookings),
