@@ -1,9 +1,9 @@
 import { ErrorRequestHandler } from "express";
 import httpStatus from "http-status";
-import config from "../config";
 import { ZodError } from "zod";
-import { IErrorSources } from "../interface/error";
+import config from "../config";
 import zodErrorHandler from "../error/zod-error-handler";
+import { IErrorSources } from "../interface/error";
 
 const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
   let statusCode = error.statusCode || httpStatus.INTERNAL_SERVER_ERROR;
@@ -14,6 +14,14 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
       message: error.message || "",
     },
   ];
+
+  // Helper to extract Postgres error details
+  if ((error as any).code && (error as any).detail) {
+    errorSources.push({
+      path: "",
+      message: `DB Error Code: ${(error as any).code}, Detail: ${(error as any).detail}`
+    })
+  }
 
   if (error instanceof ZodError) {
     const simplifiedError = zodErrorHandler(error);
