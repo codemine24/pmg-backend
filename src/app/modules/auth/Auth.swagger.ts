@@ -23,6 +23,7 @@
  *         schema:
  *           type: string
  *           format: uuid
+ *           example: "5ea04348-cf64-4bf5-9c65-a5823b65aa10"
  *         required: true
  *         description: The platform ID
  *     requestBody:
