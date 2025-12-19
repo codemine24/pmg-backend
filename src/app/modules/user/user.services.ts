@@ -2,9 +2,10 @@ import bcrypt from "bcrypt";
 import { db } from "../../../db";
 import { users } from "../../../db/schema";
 import config from "../../config";
+import { CreateUserPayload } from "./user.interfaces";
 
 // ----------------------------------- CREATE USER ------------------------------------
-const createUser = async (data: any) => {
+const createUser = async (data: CreateUserPayload) => {
   // Hash the password
   const hashedPassword = await bcrypt.hash(
     data.password,
