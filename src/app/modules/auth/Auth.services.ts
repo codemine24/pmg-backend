@@ -19,16 +19,16 @@ const generateToken = (
 };
 
 const login = async (credential: LoginCredential, platformId: string) => {
-  const { email_or_contact_number, password } = credential;
+  const { email, password } = credential;
 
-  // Search by email only as contact_number is not in schema
+  // Search by email
   // Also filtering by platformId as requested
   const [user] = await db
     .select()
     .from(users)
     .where(
       and(
-        eq(users.email, email_or_contact_number),
+        eq(users.email, email),
         eq(users.platform, platformId)
       )
     );

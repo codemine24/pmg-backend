@@ -2,7 +2,7 @@
 
 
 export interface LoginCredential {
-  email_or_contact_number: string;
+  email: string;
   password: string;
 }
 
