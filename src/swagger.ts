@@ -119,7 +119,7 @@ const swaggerDefinition = {
 
 const options = {
   swaggerDefinition,
-  apis: ["./src/app/**/*.swagger.ts"],
+  apis: ["./src/app/**/*.swagger.ts", "./dist/app/**/*.swagger.js"],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
