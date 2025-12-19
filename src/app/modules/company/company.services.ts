@@ -53,7 +53,7 @@ const getCompanies = async (platformId: string, query: Record<string, any>) => {
   // Build WHERE conditions
   const conditions: any[] = [eq(companies.platform, platformId)];
 
-  // Search term - case insensitive search on name and email
+  // Search term - case insensitive search on name and domain
   if (search_term) {
     conditions.push(
       or(
@@ -75,16 +75,18 @@ const getCompanies = async (platformId: string, query: Record<string, any>) => {
 
   // Execute queries in parallel
   const [result, total] = await Promise.all([
-    // Get paginated users
-    db
-      .select()
-      .from(companies)
-      .where(and(...conditions))
-      .orderBy(orderDirection)
-      .limit(limitNumber)
-      .offset(skip),
+    // Get paginated companies with their domains using query API
+    db.query.companies.findMany({
+      where: and(...conditions),
+      with: {
+        domains: true, // Include all related company domains
+      },
+      orderBy: orderDirection,
+      limit: limitNumber,
+      offset: skip,
+    }),
 
-    // Get count by role
+    // Get count
     db
       .select({
         count: count(),
@@ -105,4 +107,5 @@ const getCompanies = async (platformId: string, query: Record<string, any>) => {
 
 export const CompanyServices = {
   createCompany,
+  getCompanies,
 };
