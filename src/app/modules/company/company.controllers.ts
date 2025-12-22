@@ -11,7 +11,7 @@ const createCompany = catchAsync(async (req, res, next) => {
   // Merge platform ID with request body
   const companyData = {
     ...req.body,
-    platform: platformId,
+    platform_id: platformId,
   };
   
   const result = await CompanyServices.createCompany(companyData);

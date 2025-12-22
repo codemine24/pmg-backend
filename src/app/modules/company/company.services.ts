@@ -13,9 +13,9 @@ const createCompany = async (data: any) => {
 
     // Create company domain
     const [domain] = await tx.insert(companyDomains).values({
-      platform: data.platform,
+      platform_id: data.platform_id,
       type: 'VANITY',
-      company: company.id,
+      company_id: company.id,
       hostname: data.domain,
     }).returning();
 
@@ -51,7 +51,7 @@ const getCompanies = async (platformId: string, query: Record<string, any>) => {
     });
 
   // Build WHERE conditions
-  const conditions: any[] = [eq(companies.platform, platformId)];
+  const conditions: any[] = [eq(companies.platform_id, platformId)];
 
   // Search term - case insensitive search on name and domain
   if (search_term) {
@@ -64,12 +64,12 @@ const getCompanies = async (platformId: string, query: Record<string, any>) => {
   }
 
   // Determine sort order
-  let orderByColumn: any = companies.createdAt; // default
+  let orderByColumn: any = companies.created_at; // default
   if (sortWith === "id") orderByColumn = companies.id;
   else if (sortWith === "name") orderByColumn = companies.name;
   else if (sortWith === "domain") orderByColumn = companies.domain;
-  else if (sortWith === "created_at" || sortWith === "createdAt") orderByColumn = companies.createdAt;
-  else if (sortWith === "updated_at" || sortWith === "updatedAt") orderByColumn = companies.updatedAt;
+  else if (sortWith === "created_at" || sortWith === "createdAt") orderByColumn = companies.created_at;
+  else if (sortWith === "updated_at" || sortWith === "updatedAt") orderByColumn = companies.updated_at;
 
   const orderDirection = sortSequence === "asc" ? asc(orderByColumn) : desc(orderByColumn);
 

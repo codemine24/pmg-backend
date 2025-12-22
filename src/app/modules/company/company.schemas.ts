@@ -25,7 +25,7 @@ const createCompany = z.object({
           "Domain must be lowercase and contain only alphanumeric characters and hyphens",
       }),
     settings: settingsSchema,
-    isActive: z.boolean().optional().default(true),
+    is_active: z.boolean().optional().default(true),
   }),
 });
 
@@ -47,7 +47,7 @@ const updateCompany = z.object({
       })
       .optional(),
     settings: settingsSchema.optional(),
-    isActive: z.boolean().optional(),
+    is_active: z.boolean().optional(),
   }),
 });
 
