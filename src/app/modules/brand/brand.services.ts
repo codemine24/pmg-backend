@@ -64,13 +64,17 @@ const getBrands = async (query: Record<string, any>, user: AuthUser) => {
     page,
     limit,
     sort_by,
-    sort_order
+    sort_order,
+    company_id,
+    include_inactive
   } = query;
 
+  // Step 1: Validate query parameters
   if (sort_by) queryValidator(brandQueryValidationConfig, "sort_by", sort_by);
   if (sort_order)
     queryValidator(brandQueryValidationConfig, "sort_order", sort_order);
 
+  // Step 2: Setup pagination
   const { pageNumber, limitNumber, skip, sortWith, sortSequence } =
     paginationMaker({
       page,
@@ -79,32 +83,59 @@ const getBrands = async (query: Record<string, any>, user: AuthUser) => {
       sort_order,
     });
 
-  // Build WHERE conditions
+  // Step 3: Build WHERE conditions
   const conditions: any[] = [];
 
-  // Search term - case insensitive search on name
+  // Step 3a: Filter by user role (CLIENT users see only their company's brands)
+  if (user.role === 'CLIENT') {
+    if (user.company_id) {
+      conditions.push(
+        eq(brands.company_id, user.company_id),
+      );
+    } else {
+      throw new CustomizedError(httpStatus.UNAUTHORIZED, "Company not found");
+    }
+  }
+
+  // Step 3b: Search by brand name
   if (search_term) {
     conditions.push(
       ilike(brands.name, `%${search_term.trim()}%`),
     );
   }
 
-  // Determine sort order - use mapping or default to created_at
-  const orderByColumn = brandSortableFields[sortWith] || brands.created_at;
+  // Step 3c: Filter by company ID
+  if (company_id) {
+    conditions.push(eq(brands.company_id, company_id));
+  }
 
+  // Step 3d: Filter by active status (default: only active brands)
+  if (include_inactive !== 'true') {
+    conditions.push(eq(brands.is_active, true));
+  }
+
+  // Step 4: Determine sort order
+  const orderByColumn = brandSortableFields[sortWith] || brands.created_at;
   const orderDirection = sortSequence === "asc" ? asc(orderByColumn) : desc(orderByColumn);
 
-  // Execute queries in parallel
+  // Step 5: Execute queries in parallel (data + count)
   const [result, total] = await Promise.all([
-    // Get paginated brands using query API
     db.query.brands.findMany({
       where: and(...conditions),
+      with: {
+        company: {
+          columns: {
+            id: true,
+            name: true,
+            domain: true,
+          },
+        },
+      },
       orderBy: orderDirection,
       limit: limitNumber,
       offset: skip,
     }),
 
-    // Get count
     db
       .select({
         count: count(),
@@ -113,6 +144,7 @@ const getBrands = async (query: Record<string, any>, user: AuthUser) => {
       .where(and(...conditions)),
   ]);
 
+  // Step 6: Return paginated response
   return {
     meta: {
       page: pageNumber,

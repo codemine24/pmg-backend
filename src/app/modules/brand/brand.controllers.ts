@@ -33,7 +33,8 @@ const getBrands = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Brands fetched successfully",
-    data: result,
+    meta: result.meta,
+    data: result.data,
   });
 });
 
