@@ -30,7 +30,7 @@ const platformValidator = async (req: Request, res: Response, next: NextFunction
     const [platform] = await db
       .select({
         id: platforms.id,
-        isActive: platforms.isActive,
+        isActive: platforms.is_active,
       })
       .from(platforms)
       .where(eq(platforms.id, platformId));

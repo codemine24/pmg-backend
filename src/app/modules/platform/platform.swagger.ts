@@ -87,7 +87,7 @@
  *                     default: false
  *                     description: Enable API access for integrations
  *                     example: false
- *               isActive:
+ *               is_active:
  *                 type: boolean
  *                 default: true
  *                 description: Platform active status
@@ -153,15 +153,15 @@
  *                         api_access:
  *                           type: boolean
  *                           example: false
- *                     isActive:
+ *                     is_active:
  *                       type: boolean
  *                       example: true
- *                     createdAt:
+ *                     created_at:
  *                       type: string
  *                       format: date-time
  *                       description: Platform creation timestamp
  *                       example: "2025-12-19T01:30:00.000Z"
- *                     updatedAt:
+ *                     updated_at:
  *                       type: string
  *                       format: date-time
  *                       description: Platform last update timestamp

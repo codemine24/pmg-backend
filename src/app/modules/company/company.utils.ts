@@ -3,8 +3,8 @@ import { sortOrderType } from "../../constants/common";
 export const companySortableFields = [
   "name",
   "domain",
-  "createdAt",
-  "updatedAt"
+  "created_at",
+  "updated_at"
 ];
 
 export const companyQueryValidationConfig = {

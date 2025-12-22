@@ -35,9 +35,9 @@ const auth = (...roles: string[]) => {
         .from(users)
         .where(
           and(
-            eq(users.platform, platformId),
+            eq(users.platform_id, platformId),
             eq(users.id, verifiedUser?.id),
-            eq(users.isActive, true)
+            eq(users.is_active, true)
           )
         );
 

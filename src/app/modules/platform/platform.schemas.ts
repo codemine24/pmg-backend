@@ -34,7 +34,7 @@ const createPlatform = z.object({
       .max(100, "Domain must be at most 100 characters"),
     config: configSchema.optional(),
     features: featureSchema.optional(),
-    isActive: z.boolean().default(true),
+    is_active: z.boolean().default(true),
   }),
 });
 

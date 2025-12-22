@@ -1,22 +1,13 @@
 import bcrypt from "bcrypt";
 import { and, eq } from "drizzle-orm";
 import httpStatus from "http-status";
-import jwt, { Secret } from "jsonwebtoken";
+import { Secret } from "jsonwebtoken";
 import { db } from "../../../db";
 import { users } from "../../../db/schema";
 import config from "../../config";
-import ApiError from "../../error/ApiError";
+import CustomizedError from "../../error/customized-error";
+import { tokenGenerator } from "../../utils/jwt-helpers";
 import { LoginCredential } from "./Auth.interfaces";
-
-const generateToken = (
-  payload: Record<string, unknown>,
-  secret: Secret,
-  expiresIn: string
-) => {
-  return jwt.sign(payload, secret, {
-    expiresIn: expiresIn as any,
-  });
-};
 
 const login = async (credential: LoginCredential, platformId: string) => {
   const { email, password } = credential;
@@ -29,22 +20,22 @@ const login = async (credential: LoginCredential, platformId: string) => {
     .where(
       and(
         eq(users.email, email),
-        eq(users.platform, platformId)
+        eq(users.platform_id, platformId)
       )
     );
 
   if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+    throw new CustomizedError(httpStatus.NOT_FOUND, "User not found");
   }
 
-  if (!user.isActive) {
-    throw new ApiError(httpStatus.FORBIDDEN, "User account is not active");
+  if (!user.is_active) {
+    throw new CustomizedError(httpStatus.FORBIDDEN, "User account is not active");
   }
 
   const isPasswordMatch = await bcrypt.compare(password, user.password);
 
   if (!isPasswordMatch) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid password");
+    throw new CustomizedError(httpStatus.UNAUTHORIZED, "Invalid password");
   }
 
   // Remove password from response
@@ -55,26 +46,35 @@ const login = async (credential: LoginCredential, platformId: string) => {
     id: user.id,
     email: user.email,
     role: user.role,
-    company: user.company,
-    platform: user.platform
+    company_id: user.company_id,
+    platform_id: user.platform_id
   };
 
-  const accessToken = generateToken(
+  const accessToken = tokenGenerator(
     jwtPayload,
     config.jwt_access_secret as Secret,
-    config.jwt_access_expires_in as string
+   config.jwt_access_expires_in
   );
 
-  const refreshToken = generateToken(
+  const refreshToken = tokenGenerator(
     jwtPayload,
     config.jwt_refresh_secret as Secret,
-    config.jwt_refresh_expires_in as string
+    config.jwt_refresh_expires_in
   );
+
+  if(accessToken && refreshToken){
+    await db.update(users)
+    .set({
+      last_login_at: new Date(),
+    })
+    .where(eq(users.id, user.id));
+  }
 
   return {
     ...userData,
-    accessToken,
-    refreshToken,
+    last_login_at: new Date(),
+    access_token: accessToken,
+    refresh_token: refreshToken,
   };
 };
 

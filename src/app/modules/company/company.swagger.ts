@@ -55,7 +55,7 @@
  *                         type: string
  *                         description: Secondary brand color (hex code)
  *                         example: "#ffffff"
- *               isActive:
+ *               is_active:
  *                 type: boolean
  *                 default: true
  *                 description: Company active status
@@ -82,7 +82,7 @@
  *                       format: uuid
  *                       description: Company unique identifier
  *                       example: "550e8400-e29b-41d4-a716-446655440000"
- *                     platform:
+ *                     platform_id:
  *                       type: string
  *                       format: uuid
  *                       description: Platform ID (from X-Platform header)
@@ -112,15 +112,15 @@
  *                             secondary_color:
  *                               type: string
  *                               example: "#ffffff"
- *                     isActive:
+ *                     is_active:
  *                       type: boolean
  *                       example: true
- *                     createdAt:
+ *                     created_at:
  *                       type: string
  *                       format: date-time
  *                       description: Company creation timestamp
  *                       example: "2025-12-19T03:26:00.000Z"
- *                     updatedAt:
+ *                     updated_at:
  *                       type: string
  *                       format: date-time
  *                       description: Company last update timestamp
@@ -141,11 +141,11 @@
  *                             type: string
  *                             format: uuid
  *                             example: "8d7e5679-8536-51ef-a827-557766551111"
- *                           platform:
+ *                           platform_id:
  *                             type: string
  *                             format: uuid
  *                             example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
- *                           company:
+ *                           company_id:
  *                             type: string
  *                             format: uuid
  *                             example: "550e8400-e29b-41d4-a716-446655440000"
@@ -158,17 +158,17 @@
  *                             enum: [VANITY, CUSTOM]
  *                             description: Domain type
  *                             example: "VANITY"
- *                           isVerified:
+ *                           is_verified:
  *                             type: boolean
  *                             example: false
- *                           isActive:
+ *                           is_active:
  *                             type: boolean
  *                             example: true
- *                           createdAt:
+ *                           created_at:
  *                             type: string
  *                             format: date-time
  *                             example: "2025-12-19T03:26:00.000Z"
- *                           updatedAt:
+ *                           updated_at:
  *                             type: string
  *                             format: date-time
  *                             example: "2025-12-19T03:26:00.000Z"
@@ -286,15 +286,14 @@
  *         required: false
  *         schema:
  *           type: string
- *           example: "diageo"
  *       - name: sort_by
  *         in: query
  *         description: Field to sort by
  *         required: false
  *         schema:
  *           type: string
- *           enum: [name, domain, createdAt, updatedAt]
- *           default: createdAt
+ *           enum: [name, domain, created_at, updated_at]
+ *           default: created_at
  *           example: "name"
  *       - name: sort_order
  *         in: query
@@ -343,7 +342,7 @@
  *                             type: string
  *                             format: uuid
  *                             example: "550e8400-e29b-41d4-a716-446655440000"
- *                           platform:
+ *                           platform_id:
  *                             type: string
  *                             format: uuid
  *                             example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
@@ -372,14 +371,14 @@
  *                                   secondary_color:
  *                                     type: string
  *                                     example: "#ffffff"
- *                           isActive:
+ *                           is_active:
  *                             type: boolean
  *                             example: true
- *                           createdAt:
+ *                           created_at:
  *                             type: string
  *                             format: date-time
  *                             example: "2025-12-19T03:26:00.000Z"
- *                           updatedAt:
+ *                           updated_at:
  *                             type: string
  *                             format: date-time
  *                             example: "2025-12-19T03:26:00.000Z"
@@ -398,11 +397,11 @@
  *                                   type: string
  *                                   format: uuid
  *                                   example: "8d7e5679-8536-51ef-a827-557766551111"
- *                                 platform:
+ *                                 platform_id:
  *                                   type: string
  *                                   format: uuid
  *                                   example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
- *                                 company:
+ *                                 company_id:
  *                                   type: string
  *                                   format: uuid
  *                                   example: "550e8400-e29b-41d4-a716-446655440000"
@@ -414,17 +413,17 @@
  *                                   type: string
  *                                   enum: [VANITY, CUSTOM]
  *                                   example: "VANITY"
- *                                 isVerified:
+ *                                 is_verified:
  *                                   type: boolean
  *                                   example: false
- *                                 isActive:
+ *                                 is_active:
  *                                   type: boolean
  *                                   example: true
- *                                 createdAt:
+ *                                 created_at:
  *                                   type: string
  *                                   format: date-time
  *                                   example: "2025-12-19T03:26:00.000Z"
- *                                 updatedAt:
+ *                                 updated_at:
  *                                   type: string
  *                                   format: date-time
  *                                   example: "2025-12-19T03:26:00.000Z"

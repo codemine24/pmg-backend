@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1766079016315,
-      "tag": "0000_eminent_hiroim",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1766079578833,
-      "tag": "0001_faulty_dexter_bennett",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1766090313793,
-      "tag": "0002_productive_terror",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1766091296543,
-      "tag": "0003_dashing_spectrum",
+      "when": 1766407464069,
+      "tag": "0000_lyrical_runaways",
       "breakpoints": true
     }
   ]
