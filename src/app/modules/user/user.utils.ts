@@ -3,8 +3,8 @@ import { sortOrderType } from "../../constants/common";
 export const userSortableFields = [
   "name",
   "email",
-  "createdAt",
-  "updatedAt",
+  "created_at",
+  "updated_at",
   "role",
 ];
 

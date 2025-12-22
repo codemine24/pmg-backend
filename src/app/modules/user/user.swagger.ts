@@ -244,7 +244,6 @@
  *         schema:
  *           type: integer
  *           minimum: 1
- *           maximum: 100
  *           default: 10
  *           example: 10
  *       - name: search_term
@@ -253,7 +252,6 @@
  *         required: false
  *         schema:
  *           type: string
- *           example: "john"
  *       - name: role
  *         in: query
  *         description: Filter by user role (comma-separated for multiple roles)
@@ -261,7 +259,6 @@
  *         schema:
  *           type: string
  *           enum: [ADMIN, LOGISTICS, CLIENT]
- *           example: "ADMIN,CLIENT"
  *       - name: is_active
  *         in: query
  *         description: Filter by active status
@@ -269,7 +266,6 @@
  *         schema:
  *           type: string
  *           enum: ["true", "false"]
- *           example: "true"
  *       - name: company_id
  *         in: query
  *         description: Filter by company ID
@@ -277,7 +273,6 @@
  *         schema:
  *           type: string
  *           format: uuid
- *           example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
  *       - name: sort_by
  *         in: query
  *         description: Field to sort by
@@ -303,7 +298,6 @@
  *         schema:
  *           type: string
  *           format: date-time
- *           example: "2025-01-01T00:00:00.000Z"
  *       - name: to_date
  *         in: query
  *         description: Filter users created until this date (ISO 8601 format)
@@ -311,7 +305,6 @@
  *         schema:
  *           type: string
  *           format: date-time
- *           example: "2025-12-31T23:59:59.999Z"
  *     responses:
  *       200:
  *         description: Users retrieved successfully

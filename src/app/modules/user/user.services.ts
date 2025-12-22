@@ -111,20 +111,7 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
   const [result, total] = await Promise.all([
     // Get paginated users
     db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        role: users.role,
-        is_active: users.is_active,
-        created_at: users.created_at,
-        updated_at: users.updated_at,
-        platform_id: users.platform_id,
-        company_id: users.company_id,
-        permissions: users.permissions,
-        permission_template: users.permission_template,
-        last_login_at: users.last_login_at,
-      })
+      .select()
       .from(users)
       .where(and(...conditions))
       .orderBy(orderDirection)
