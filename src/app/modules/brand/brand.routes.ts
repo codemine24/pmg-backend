@@ -16,9 +16,10 @@ router.post(
   BrandControllers.createBrand
 );
 
-// TODO: Implement these routes
 // Get all brands
-// router.get("/", platformValidator, auth('ADMIN'), BrandControllers.getBrands);
+router.get("/", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), BrandControllers.getBrands);
+
+// TODO: Implement these routes
 
 // Get brand by id
 // router.get("/:id", platformValidator, auth('ADMIN'), BrandControllers.getBrandById);

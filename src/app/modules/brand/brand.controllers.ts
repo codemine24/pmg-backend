@@ -7,15 +7,15 @@ import { BrandServices } from "./brand.services";
 const createBrand = catchAsync(async (req, res) => {
   // Extract platform ID from middleware
   const platformId = (req as any).platformId;
-  
+
   // Merge platform ID with request body
   const brandData = {
     ...req.body,
     platform_id: platformId,
   };
-  
+
   const result = await BrandServices.createBrand(brandData);
-  
+
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
@@ -24,6 +24,20 @@ const createBrand = catchAsync(async (req, res) => {
   });
 });
 
+// ----------------------------------- GET BRANDS -------------------------------------
+const getBrands = catchAsync(async (req, res) => {
+  const user = (req as any).user;
+  const result = await BrandServices.getBrands(req.query, user);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Brands fetched successfully",
+    data: result,
+  });
+});
+
 export const BrandControllers = {
   createBrand,
+  getBrands,
 };

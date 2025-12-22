@@ -3,11 +3,12 @@ import httpStatus from "http-status";
 import { db } from "../../../db";
 import { brands, companies } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
+import { AuthUser } from "../../interface/common";
 import { isValidUrl } from "../../utils/helper";
 import paginationMaker from "../../utils/pagination-maker";
 import queryValidator from "../../utils/query-validator";
 import { CreateBrandPayload } from "./brand.interfaces";
-import { brandQueryValidationConfig } from "./brand.utils";
+import { brandQueryValidationConfig, brandSortableFields } from "./brand.utils";
 
 // ----------------------------------- CREATE BRAND -----------------------------------
 const createBrand = async (data: CreateBrandPayload) => {
@@ -57,7 +58,7 @@ const createBrand = async (data: CreateBrandPayload) => {
 };
 
 // ----------------------------------- GET BRANDS -------------------------------------
-const getBrands = async (query: Record<string, any>) => {
+const getBrands = async (query: Record<string, any>, user: AuthUser) => {
   const {
     search_term,
     page,
@@ -88,11 +89,8 @@ const getBrands = async (query: Record<string, any>) => {
     );
   }
 
-  // Determine sort order
-  let orderByColumn: any = brands.created_at; // default
-  if (sortWith === "name") orderByColumn = brands.name;
-  else if (sortWith === "created_at") orderByColumn = brands.created_at;
-  else if (sortWith === "updated_at") orderByColumn = brands.updated_at;
+  // Determine sort order - use mapping or default to created_at
+  const orderByColumn = brandSortableFields[sortWith] || brands.created_at;
 
   const orderDirection = sortSequence === "asc" ? asc(orderByColumn) : desc(orderByColumn);
 
