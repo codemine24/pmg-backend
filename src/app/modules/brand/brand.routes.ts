@@ -1,5 +1,8 @@
 import { Router } from "express";
+import auth from "../../middleware/auth";
 import payloadValidator from "../../middleware/payload-validator";
+import platformValidator from "../../middleware/platform-validator";
+import { BrandControllers } from "./brand.controllers";
 import { brandsSchemas } from "./brand.schemas";
 
 const router = Router();
@@ -7,19 +10,24 @@ const router = Router();
 // Create brand
 router.post(
   "/",
+  platformValidator,
+  auth('ADMIN'),
   payloadValidator(brandsSchemas.brandSchema),
+  BrandControllers.createBrand
 );
 
 // Get all brands
-router.get("/")
+router.get("/", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), BrandControllers.getBrands);
+
+// TODO: Implement these routes
 
 // Get brand by id
-router.get("/:id")
+// router.get("/:id", platformValidator, auth('ADMIN'), BrandControllers.getBrandById);
 
 // Update brand
-router.patch("/:id", payloadValidator(brandsSchemas.updateBrandSchema));
+// router.patch("/:id", platformValidator, auth('ADMIN'), payloadValidator(brandsSchemas.updateBrandSchema), BrandControllers.updateBrand);
 
 // Delete brand
-router.delete("/:id");
+// router.delete("/:id", platformValidator, auth('ADMIN'), BrandControllers.deleteBrand);
 
 export const BrandRoutes = router;
