@@ -10,7 +10,7 @@ const createUser = catchAsync(async (req, res, next) => {
   // Merge platform ID with request body
   const userData = {
     ...req.body,
-    platform: platformId,
+    platform_id: platformId,
   };
   
   const result = await UserServices.createUser(userData);

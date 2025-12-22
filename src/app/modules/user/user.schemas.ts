@@ -14,7 +14,7 @@ const permissionTemplateEnum = z.enum(
 
 const createUser = z.object({
   body: z.object({
-    company: z
+    company_id: z
       .uuid("Company ID must be a valid UUID")
       .optional()
       .nullable(),
@@ -37,13 +37,13 @@ const createUser = z.object({
       .optional()
       .default([]),
     permission_template: permissionTemplateEnum.optional().nullable(),
-    isActive: z.boolean().optional().default(true),
+    is_active: z.boolean().optional().default(true),
   }),
 });
 
 const updateUser = z.object({
   body: z.object({
-    company: z
+    company_id: z
       .string()
       .uuid("Company ID must be a valid UUID")
       .optional()
@@ -70,7 +70,7 @@ const updateUser = z.object({
       })
       .optional(),
     permission_template: permissionTemplateEnum.optional().nullable(),
-    isActive: z.boolean().optional(),
+    is_active: z.boolean().optional(),
   }),
 });
 

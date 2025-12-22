@@ -50,7 +50,7 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
     });
 
   // Build WHERE conditions
-  const conditions: any[] = [eq(users.platform, platformId)];
+  const conditions: any[] = [eq(users.platform_id, platformId)];
 
   // Search term - case insensitive search on name and email
   if (search_term) {
@@ -65,12 +65,12 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
   // Date range filtering
   if (from_date) {
     const date = validDateChecker(from_date, "from_date");
-    conditions.push(gte(users.createdAt, date));
+    conditions.push(gte(users.created_at, date));
   }
 
   if (to_date) {
     const date = validDateChecker(to_date, "to_date");
-    conditions.push(lte(users.createdAt, date));
+    conditions.push(lte(users.created_at, date));
   }
 
   // Handle remaining query parameters (role, isActive, etc.)
@@ -87,23 +87,23 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
         }
       } else if (key === "isActive" || key === "is_active") {
         const boolValue = value === "true";
-        conditions.push(eq(users.isActive, boolValue));
-      } else if (key === "platform") {
-        conditions.push(eq(users.platform, value));
-      } else if (key === "company") {
-        conditions.push(eq(users.company, value));
+        conditions.push(eq(users.is_active, boolValue));
+      } else if (key === "platform" || key === "platform_id") {
+        conditions.push(eq(users.platform_id, value));
+      } else if (key === "company" || key === "company_id") {
+        conditions.push(eq(users.company_id, value));
       }
     }
   }
 
   // Determine sort order
-  let orderByColumn: any = users.createdAt; // default
+  let orderByColumn: any = users.created_at; // default
   if (sortWith === "id") orderByColumn = users.id;
   else if (sortWith === "name") orderByColumn = users.name;
   else if (sortWith === "email") orderByColumn = users.email;
   else if (sortWith === "role") orderByColumn = users.role;
-  else if (sortWith === "created_at" || sortWith === "createdAt") orderByColumn = users.createdAt;
-  else if (sortWith === "updated_at" || sortWith === "updatedAt") orderByColumn = users.updatedAt;
+  else if (sortWith === "created_at" || sortWith === "createdAt") orderByColumn = users.created_at;
+  else if (sortWith === "updated_at" || sortWith === "updatedAt") orderByColumn = users.updated_at;
 
   const orderDirection = sortSequence === "asc" ? asc(orderByColumn) : desc(orderByColumn);
 
@@ -116,14 +116,14 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
         name: users.name,
         email: users.email,
         role: users.role,
-        isActive: users.isActive,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-        platform: users.platform,
-        company: users.company,
+        is_active: users.is_active,
+        created_at: users.created_at,
+        updated_at: users.updated_at,
+        platform_id: users.platform_id,
+        company_id: users.company_id,
         permissions: users.permissions,
         permission_template: users.permission_template,
-        lastLoginAt: users.lastLoginAt,
+        last_login_at: users.last_login_at,
       })
       .from(users)
       .where(and(...conditions))

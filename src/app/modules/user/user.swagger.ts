@@ -19,7 +19,7 @@
  *               - email
  *               - password
  *             properties:
- *               company:
+ *               company_id:
  *                 type: string
  *                 format: uuid
  *                 nullable: true
@@ -62,7 +62,7 @@
  *                 nullable: true
  *                 description: Permission template to apply
  *                 example: "PLATFORM_ADMIN"
- *               isActive:
+ *               is_active:
  *                 type: boolean
  *                 default: true
  *                 description: Whether the user account is active
@@ -89,12 +89,12 @@
  *                       format: uuid
  *                       description: User unique identifier
  *                       example: "550e8400-e29b-41d4-a716-446655440000"
- *                     platform:
+ *                     platform_id:
  *                       type: string
  *                       format: uuid
  *                       description: Platform ID (from X-Platform header)
  *                       example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
- *                     company:
+ *                     company_id:
  *                       type: string
  *                       format: uuid
  *                       nullable: true
@@ -120,21 +120,21 @@
  *                       type: string
  *                       nullable: true
  *                       example: "CLIENT_USER"
- *                     isActive:
+ *                     is_active:
  *                       type: boolean
  *                       example: true
- *                     lastLoginAt:
+ *                     last_login_at:
  *                       type: string
  *                       format: date-time
  *                       nullable: true
  *                       description: Last login timestamp
  *                       example: null
- *                     createdAt:
+ *                     created_at:
  *                       type: string
  *                       format: date-time
  *                       description: User creation timestamp
  *                       example: "2025-12-19T02:30:00.000Z"
- *                     updatedAt:
+ *                     updated_at:
  *                       type: string
  *                       format: date-time
  *                       description: User last update timestamp
@@ -262,7 +262,7 @@
  *           type: string
  *           enum: [ADMIN, LOGISTICS, CLIENT]
  *           example: "ADMIN,CLIENT"
- *       - name: isActive
+ *       - name: is_active
  *         in: query
  *         description: Filter by active status
  *         required: false
@@ -270,7 +270,7 @@
  *           type: string
  *           enum: ["true", "false"]
  *           example: "true"
- *       - name: company
+ *       - name: company_id
  *         in: query
  *         description: Filter by company ID
  *         required: false
@@ -284,9 +284,9 @@
  *         required: false
  *         schema:
  *           type: string
- *           enum: [id, name, email, role, createdAt, updatedAt]
- *           default: createdAt
- *           example: "createdAt"
+ *           enum: [id, name, email, role, created_at, updated_at]
+ *           default: created_at
+ *           example: "created_at"
  *       - name: sort_order
  *         in: query
  *         description: Sort order
@@ -350,11 +350,11 @@
  *                             type: string
  *                             format: uuid
  *                             example: "550e8400-e29b-41d4-a716-446655440000"
- *                           platform:
+ *                           platform_id:
  *                             type: string
  *                             format: uuid
  *                             example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
- *                           company:
+ *                           company_id:
  *                             type: string
  *                             format: uuid
  *                             nullable: true
@@ -379,19 +379,19 @@
  *                             type: string
  *                             nullable: true
  *                             example: "CLIENT_USER"
- *                           isActive:
+ *                           is_active:
  *                             type: boolean
  *                             example: true
- *                           lastLoginAt:
+ *                           last_login_at:
  *                             type: string
  *                             format: date-time
  *                             nullable: true
  *                             example: "2025-12-18T10:30:00.000Z"
- *                           createdAt:
+ *                           created_at:
  *                             type: string
  *                             format: date-time
  *                             example: "2025-12-19T02:30:00.000Z"
- *                           updatedAt:
+ *                           updated_at:
  *                             type: string
  *                             format: date-time
  *                             example: "2025-12-19T02:30:00.000Z"

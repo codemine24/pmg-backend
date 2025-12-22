@@ -46,7 +46,7 @@ const swaggerDefinition = {
         schema: {
           type: "string",
           format: "uuid",
-          example: "5ea04348-cf64-4bf5-9c65-a5823b65aa10",
+          example: "593c027e-0774-4b0b-ae46-ec59c4f11304",
         },
         description: "Platform UUID (required on all requests)",
       },
