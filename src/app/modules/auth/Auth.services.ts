@@ -5,7 +5,7 @@ import jwt, { Secret } from "jsonwebtoken";
 import { db } from "../../../db";
 import { users } from "../../../db/schema";
 import config from "../../config";
-import ApiError from "../../error/ApiError";
+import CustomizedError from "../../error/customized-error";
 import { LoginCredential } from "./Auth.interfaces";
 
 const generateToken = (
@@ -29,22 +29,22 @@ const login = async (credential: LoginCredential, platformId: string) => {
     .where(
       and(
         eq(users.email, email),
-        eq(users.platform, platformId)
+        eq(users.platform_id, platformId)
       )
     );
 
   if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+    throw new CustomizedError(httpStatus.NOT_FOUND, "User not found");
   }
 
-  if (!user.isActive) {
-    throw new ApiError(httpStatus.FORBIDDEN, "User account is not active");
+  if (!user.is_active) {
+    throw new CustomizedError(httpStatus.FORBIDDEN, "User account is not active");
   }
 
   const isPasswordMatch = await bcrypt.compare(password, user.password);
 
   if (!isPasswordMatch) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid password");
+    throw new CustomizedError(httpStatus.UNAUTHORIZED, "Invalid password");
   }
 
   // Remove password from response
@@ -55,8 +55,8 @@ const login = async (credential: LoginCredential, platformId: string) => {
     id: user.id,
     email: user.email,
     role: user.role,
-    company: user.company,
-    platform: user.platform
+    company_id: user.company_id,
+    platform_id: user.platform_id
   };
 
   const accessToken = generateToken(
