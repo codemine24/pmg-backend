@@ -8,45 +8,6 @@ import queryValidator from "../../utils/query-validator";
 import { CreatePricingTierPayload } from "./pricing-tier.interfaces";
 import { pricingTierQueryValidationConfig, pricingTierSortableFields } from "./pricing-tier.utils";
 
-// ----------------------------------- HELPER FUNCTIONS -----------------------------------
-async function checkVolumeOverlap(
-    country: string,
-    city: string,
-    volumeMin: number,
-    volumeMax: number | null | undefined,
-    platformId: string,
-    excludeId?: string
-): Promise<any | null> {
-    const conditions: any[] = [
-        eq(pricingTiers.country, country),
-        eq(pricingTiers.city, city),
-        eq(pricingTiers.platform_id, platformId),
-        eq(pricingTiers.is_active, true),
-    ];
-
-    if (excludeId) {
-        conditions.push(sql`${pricingTiers.id} != ${excludeId}`);
-    }
-
-    const existingTiers = await db
-        .select()
-        .from(pricingTiers)
-        .where(and(...conditions));
-
-    for (const tier of existingTiers) {
-        const tierMin = parseFloat(tier.volume_min);
-        const tierMax = tier.volume_max ? parseFloat(tier.volume_max) : Infinity;
-        const newMax = volumeMax !== null && volumeMax !== undefined ? volumeMax : Infinity;
-
-        // Check if ranges overlap: (start1 < end2) AND (start2 < end1)
-        if (volumeMin < tierMax && tierMin < newMax) {
-            return tier;
-        }
-    }
-
-    return null;
-}
-
 // ----------------------------------- CREATE PRICING TIER -----------------------------------
 const createPricingTier = async (data: CreatePricingTierPayload) => {
     const { country, city, volume_min, volume_max, base_price, platform_id } = data;
@@ -176,14 +137,14 @@ const getPricingTiers = async (query: Record<string, any>, platformId: string) =
             .where(and(...conditions)),
     ]);
 
-    // Step 6: Return paginated response
+    // Step 6: Transform and return paginated response
     return {
         meta: {
             page: pageNumber,
             limit: limitNumber,
             total: total[0].count,
         },
-        data: result,
+        data: result.map(transformPricingTierResponse),
     };
 };
 
@@ -206,7 +167,8 @@ const getPricingTierById = async (id: string, platformId: string) => {
         throw new CustomizedError(httpStatus.NOT_FOUND, "Pricing tier not found");
     }
 
-    return pricingTier;
+    // Step 4: Transform and return pricing tier
+    return transformPricingTierResponse(pricingTier);
 };
 
 // ----------------------------------- UPDATE PRICING TIER -----------------------------------
@@ -325,6 +287,55 @@ const deletePricingTier = async (id: string, platformId: string) => {
         .returning();
 
     return null;
+};
+
+// ----------------------------------- HELPER FUNCTIONS --------------------------------------
+const checkVolumeOverlap = async (
+    country: string,
+    city: string,
+    volumeMin: number,
+    volumeMax: number | null | undefined,
+    platformId: string,
+    excludeId?: string
+): Promise<any | null> => {
+    const conditions: any[] = [
+        eq(pricingTiers.country, country),
+        eq(pricingTiers.city, city),
+        eq(pricingTiers.platform_id, platformId),
+        eq(pricingTiers.is_active, true),
+    ];
+
+    if (excludeId) {
+        conditions.push(sql`${pricingTiers.id} != ${excludeId}`);
+    }
+
+    const existingTiers = await db
+        .select()
+        .from(pricingTiers)
+        .where(and(...conditions));
+
+    for (const tier of existingTiers) {
+        const tierMin = parseFloat(tier.volume_min);
+        const tierMax = tier.volume_max ? parseFloat(tier.volume_max) : Infinity;
+        const newMax = volumeMax !== null && volumeMax !== undefined ? volumeMax : Infinity;
+
+        // Check if ranges overlap: (start1 < end2) AND (start2 < end1)
+        if (volumeMin < tierMax && tierMin < newMax) {
+            return tier;
+        }
+    }
+
+    return null;
+};
+
+// Transform pricing tier response to convert string fields to numbers
+const transformPricingTierResponse = (tier: any) => {
+    return {
+        ...tier,
+        volume_min: parseFloat(tier.volume_min),
+        volume_max: tier.volume_max ? parseFloat(tier.volume_max) : null,
+        base_price: parseFloat(tier.base_price),
+    };
 };
 
 export const PricingTierServices = {
