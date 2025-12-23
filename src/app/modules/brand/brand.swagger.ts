@@ -694,42 +694,9 @@
  *                   type: string
  *                   example: "Brand deleted successfully"
  *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                       format: uuid
- *                       example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
- *                     platform_id:
- *                       type: string
- *                       format: uuid
- *                       example: "593c027e-0774-4b0b-ae46-ec59c4f11304"
- *                     company_id:
- *                       type: string
- *                       format: uuid
- *                       example: "e9f0041c-84c0-4396-8b7e-72b804a4695d"
- *                     name:
- *                       type: string
- *                       example: "Nike"
- *                     description:
- *                       type: string
- *                       nullable: true
- *                       example: "Leading sportswear and athletic brand"
- *                     logo_url:
- *                       type: string
- *                       nullable: true
- *                       example: "https://cdn.example.com/logos/nike.png"
- *                     is_active:
- *                       type: boolean
- *                       example: false
- *                     created_at:
- *                       type: string
- *                       format: date-time
- *                       example: "2025-12-22T17:15:41.843Z"
- *                     updated_at:
- *                       type: string
- *                       format: date-time
- *                       example: "2025-12-23T14:35:10.892Z"
+ *                   type: "null"
+ *                   nullable: true
+ *                   example: null
  *       401:
  *         description: Unauthorized - Authentication required
  *         content:
