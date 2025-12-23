@@ -60,6 +60,47 @@ const createPricingTier = async (data: CreatePricingTierPayload) => {
     }
 };
 
+// ----------------------------------- GET PRICING TIER LOCATIONS -----------------------------------
+const getPricingTierLocations = async (platformId: string) => {
+    // Step 1: Fetch only active pricing tier locations (no pricing details)
+    const tiers = await db
+        .select({
+            country: pricingTiers.country,
+            city: pricingTiers.city,
+        })
+        .from(pricingTiers)
+        .where(
+            and(
+                eq(pricingTiers.platform_id, platformId),
+                eq(pricingTiers.is_active, true)
+            )
+        );
+
+    // Step 2: Extract unique countries
+    const countries = Array.from(new Set(tiers.map((t) => t.country))).sort();
+
+    // Step 3: Group cities by country
+    const locationsByCountry: Record<string, string[]> = {};
+    tiers.forEach((tier) => {
+        if (!locationsByCountry[tier.country]) {
+            locationsByCountry[tier.country] = [];
+        }
+        if (!locationsByCountry[tier.country].includes(tier.city)) {
+            locationsByCountry[tier.country].push(tier.city);
+        }
+    });
+
+    // Step 4: Sort cities within each country
+    Object.keys(locationsByCountry).forEach((country) => {
+        locationsByCountry[country].sort();
+    });
+
+    return {
+        countries,
+        locations_by_country: locationsByCountry,
+    };
+};
+
 // ----------------------------------- GET PRICING TIERS -------------------------------------
 const getPricingTiers = async (query: Record<string, any>, platformId: string) => {
     const {
@@ -354,4 +395,5 @@ export const PricingTierServices = {
     getPricingTierById,
     updatePricingTier,
     deletePricingTier,
+    getPricingTierLocations,
 };

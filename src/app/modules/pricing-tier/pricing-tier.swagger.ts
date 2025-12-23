@@ -90,6 +90,64 @@
  *         $ref: '#/components/responses/InternalServerError'
  *     security:
  *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/pricing-tier/locations:
+ *   get:
+ *     tags:
+ *       - Pricing Tier Management
+ *     summary: Get pricing tier locations
+ *     description: Retrieves unique countries and cities from active pricing tiers. Returns a list of countries and cities grouped by country. Only ADMIN and LOGISTICS users can access this endpoint.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *     responses:
+ *       200:
+ *         description: Pricing tier locations retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Pricing tier locations fetched successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     countries:
+ *                       type: array
+ *                       description: Sorted list of unique countries
+ *                       items:
+ *                         type: string
+ *                       example: ["Saudi Arabia", "United Arab Emirates"]
+ *                     locations_by_country:
+ *                       type: object
+ *                       description: Cities grouped by country (sorted)
+ *                       additionalProperties:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       example:
+ *                         "United Arab Emirates": ["Abu Dhabi", "Dubai"]
+ *                         "Saudi Arabia": ["Jeddah", "Riyadh"]
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/pricing-tier:
  *   get:
  *     tags:
  *       - Pricing Tier Management

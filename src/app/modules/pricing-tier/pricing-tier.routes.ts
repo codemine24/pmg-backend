@@ -16,6 +16,9 @@ router.post(
     PricingTierControllers.createPricingTier
 );
 
+// Get pricing tier locations (countries and cities)
+router.get("/locations", platformValidator, auth('ADMIN', 'LOGISTICS'), PricingTierControllers.getPricingTierLocations);
+
 // Get all pricing tiers
 router.get("/", platformValidator, auth('ADMIN', 'LOGISTICS'), PricingTierControllers.getPricingTiers);
 

@@ -82,10 +82,25 @@ const deletePricingTier = catchAsync(async (req, res) => {
     });
 });
 
+// ----------------------------------- GET PRICING TIER LOCATIONS --------------------------------
+const getPricingTierLocations = catchAsync(async (req, res) => {
+    const platformId = (req as any).platformId;
+
+    const result = await PricingTierServices.getPricingTierLocations(platformId);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Pricing tier locations fetched successfully",
+        data: result,
+    });
+});
+
 export const PricingTierControllers = {
     createPricingTier,
     getPricingTiers,
     getPricingTierById,
     updatePricingTier,
     deletePricingTier,
+    getPricingTierLocations,
 };
