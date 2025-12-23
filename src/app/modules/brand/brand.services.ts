@@ -203,15 +203,6 @@ const updateBrand = async (id: string, data: any, user: AuthUser, platformId: st
       eq(brands.platform_id, platformId),
     ];
 
-    // Step 1a: CLIENT users can only update their company's brands
-    if (user.role === 'CLIENT') {
-      if (user.company_id) {
-        conditions.push(eq(brands.company_id, user.company_id));
-      } else {
-        throw new CustomizedError(httpStatus.UNAUTHORIZED, "Company not found");
-      }
-    }
-
     const [existingBrand] = await db
       .select()
       .from(brands)
@@ -234,7 +225,6 @@ const updateBrand = async (id: string, data: any, user: AuthUser, platformId: st
       .update(brands)
       .set({
         ...data,
-        updated_at: new Date(),
       })
       .where(eq(brands.id, id))
       .returning();
@@ -279,7 +269,7 @@ const deleteBrand = async (id: string, user: AuthUser, platformId: string) => {
   }
 
   // Step 2: Mark brand as inactive (soft delete)
-  const [result] = await db
+  await db
     .update(brands)
     .set({
       is_active: false,
@@ -288,7 +278,7 @@ const deleteBrand = async (id: string, user: AuthUser, platformId: string) => {
     .where(eq(brands.id, id))
     .returning();
 
-  return result;
+  return null;
 };
 
 export const BrandServices = {
