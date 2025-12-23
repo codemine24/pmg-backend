@@ -38,16 +38,6 @@ const pricingTierSchema = z.object({
 
 const updatePricingTierSchema = z.object({
     body: z.object({
-        country: z
-            .string()
-            .min(1, "Country cannot be empty")
-            .max(50, "Country must be under 50 characters")
-            .optional(),
-        city: z
-            .string()
-            .min(1, "City cannot be empty")
-            .max(50, "City must be under 50 characters")
-            .optional(),
         volume_min: z
             .number()
             .min(0, "Minimum volume must be at least 0")
@@ -62,16 +52,27 @@ const updatePricingTierSchema = z.object({
             .min(0, "Base price must be at least 0")
             .optional(),
         is_active: z.boolean().optional(),
-    }).strict().refine(
+    }).refine(
         (data) => {
             if (data.volume_min !== undefined && data.volume_max !== null && data.volume_max !== undefined) {
-                return data.volume_max > data.volume_min;
+                return data.volume_max >= data.volume_min;
             }
             return true;
         },
         {
-            message: "Maximum volume must be greater than minimum volume",
+            message: "Maximum volume must be greater than or equal to minimum volume",
             path: ["volume_max"],
+        }
+    ).refine(
+        (data: any) => {
+            if (data.country !== undefined || data.city !== undefined) {
+                return false;
+            }
+            return true;
+        },
+        {
+            message: "Country and city cannot be updated. Please create a new pricing tier instead.",
+            path: ["country"],
         }
     ),
 });

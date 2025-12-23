@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import httpStatus from "http-status";
 import { db } from "../../../db";
-import { pricingTiers } from "../../../db/schema";
+import { orders, pricingTiers } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
 import paginationMaker from "../../utils/pagination-maker";
 import queryValidator from "../../utils/query-validator";
@@ -197,8 +197,8 @@ const updatePricingTier = async (id: string, data: any, platformId: string) => {
             ? (data.volume_max !== null ? data.volume_max : null)
             : (existingPricingTier.volume_max ? parseFloat(existingPricingTier.volume_max) : null);
 
-        // Only check overlap if location or volume fields are being changed
-        if (data.country || data.city || data.volume_min !== undefined || data.volume_max !== undefined) {
+        // Only check overlap if volume fields are being changed
+        if (data.volume_min !== undefined || data.volume_max !== undefined) {
             const overlap = await checkVolumeOverlap(
                 updatedCountry,
                 updatedCity,
@@ -277,14 +277,24 @@ const deletePricingTier = async (id: string, platformId: string) => {
         throw new CustomizedError(httpStatus.NOT_FOUND, "Pricing tier not found");
     }
 
-    // Step 2: Soft delete pricing tier (set is_active to false)
+    // Step 2: Check if pricing tier is referenced by any orders
+    const [orderReference] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.tier_id, id))
+        .limit(1);
+
+    if (orderReference) {
+        throw new CustomizedError(
+            httpStatus.CONFLICT,
+            "Cannot delete pricing tier because it is referenced by existing orders. You can deactivate it instead."
+        );
+    }
+
+    // Step 3: Permanently delete pricing tier
     await db
-        .update(pricingTiers)
-        .set({
-            is_active: false,
-        })
-        .where(eq(pricingTiers.id, id))
-        .returning();
+        .delete(pricingTiers)
+        .where(eq(pricingTiers.id, id));
 
     return null;
 };
