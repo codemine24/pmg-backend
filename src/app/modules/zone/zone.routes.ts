@@ -1,25 +1,31 @@
 import { Router } from "express";
+import auth from "../../middleware/auth";
 import payloadValidator from "../../middleware/payload-validator";
+import platformValidator from "../../middleware/platform-validator";
+import { ZoneControllers } from "./zone.controllers";
 import { zoneSchemas } from "./zone.schemas";
 
 const router = Router();
 
 // Create zone
 router.post(
-  "/",
-  payloadValidator(zoneSchemas.createZoneSchema),
+    "/",
+    platformValidator,
+    auth('ADMIN', 'LOGISTICS'),
+    payloadValidator(zoneSchemas.zoneSchema),
+    ZoneControllers.createZone
 );
 
 // Get all zones
-router.get("/")
+router.get("/", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), ZoneControllers.getZones);
 
 // Get zone by id
-router.get("/:id")
+router.get("/:id", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), ZoneControllers.getZoneById);
 
 // Update zone
-router.patch("/:id", payloadValidator(zoneSchemas.updateZoneSchema));
+router.patch("/:id", platformValidator, auth('ADMIN', 'LOGISTICS'), payloadValidator(zoneSchemas.updateZoneSchema), ZoneControllers.updateZone);
 
 // Delete zone
-router.delete("/:id");
+router.delete("/:id", platformValidator, auth('ADMIN'), ZoneControllers.deleteZone);
 
 export const ZoneRoutes = router;
