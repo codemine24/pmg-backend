@@ -9,7 +9,7 @@ import queryValidator from "../../utils/query-validator";
 import { CreateAssetPayload } from "./assets.interfaces";
 import { assetQueryValidationConfig, assetSortableFields } from "./assets.utils";
 
-// ----------------------------------- HELPER: GENERATE UNIQUE QR CODE ----------------------------
+// ----------------------------------- HELPER: GENERATE UNIQUE QR CODE ----------------
 const generateUniqueQRCode = async (baseQRCode: string, platformId: string): Promise<string> => {
     let qrCode = baseQRCode;
     let counter = 1;
@@ -38,7 +38,7 @@ const generateUniqueQRCode = async (baseQRCode: string, platformId: string): Pro
 };
 
 // ----------------------------------- CREATE ASSET -----------------------------------
-const createAsset = async (data: CreateAssetPayload) => {
+const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
     try {
         // Step 1: Validate company, warehouse and zone exists and is not archived
         const [[company], [warehouse], [zone]] = await Promise.all([
@@ -110,6 +110,17 @@ const createAsset = async (data: CreateAssetPayload) => {
                 // Generate unique QR code for each unit
                 const qrCode = await generateUniqueQRCode(data.qr_code, data.platform_id);
 
+                // Create initial condition history entry
+                const initialConditionHistory = [];
+                if (data.condition_notes || (data.condition && data.condition !== 'GREEN')) {
+                    initialConditionHistory.push({
+                        condition: data.condition || 'GREEN',
+                        notes: data.condition_notes || 'Initial condition',
+                        updated_by: user.id,
+                        timestamp: new Date().toISOString(),
+                    });
+                }
+
                 // Create individual asset with quantity=1
                 const [asset] = await db
                     .insert(assets)
@@ -134,7 +145,7 @@ const createAsset = async (data: CreateAssetPayload) => {
                         condition: data.condition || 'GREEN',
                         condition_notes: data.condition_notes || null,
                         refurb_days_estimate: data.refurb_days_estimate || null,
-                        condition_history: [],
+                        condition_history: initialConditionHistory,
                         handling_tags: data.handling_tags || [],
                         status: data.status || 'AVAILABLE',
                     })
@@ -156,6 +167,17 @@ const createAsset = async (data: CreateAssetPayload) => {
         // Step 4: INDIVIDUAL tracking with quantity=1 OR BATCH tracking - Create single asset
         const qrCode = await generateUniqueQRCode(data.qr_code, data.platform_id);
 
+        // Create initial condition history entry
+        const initialConditionHistory = [];
+        if (data.condition_notes || (data.condition && data.condition !== 'GREEN')) {
+            initialConditionHistory.push({
+                condition: data.condition || 'GREEN',
+                notes: data.condition_notes || 'Initial condition',
+                updated_by: user.id,
+                timestamp: new Date().toISOString(),
+            });
+        }
+
         const dbData = {
             ...data,
             qr_code: qrCode,
@@ -169,7 +191,7 @@ const createAsset = async (data: CreateAssetPayload) => {
             condition: data.condition || 'GREEN',
             condition_notes: data.condition_notes || null,
             refurb_days_estimate: data.refurb_days_estimate || null,
-            condition_history: [],
+            condition_history: initialConditionHistory,
             handling_tags: data.handling_tags || [],
             status: data.status || 'AVAILABLE',
         };
@@ -412,8 +434,14 @@ const getAssetById = async (id: string, user: AuthUser, platformId: string) => {
     // Step 5: Extract latest condition notes from condition_history JSONB
     let latestConditionNotes: string | undefined = undefined;
     if (asset.condition_history && Array.isArray(asset.condition_history) && asset.condition_history.length > 0) {
-        // Assuming condition_history is sorted by timestamp desc, get the first entry
-        const latestHistory = asset.condition_history[0];
+        // Sort condition_history by timestamp desc to get the most recent entry first
+        const sortedHistory = [...asset.condition_history].sort((a: any, b: any) => {
+            const timeA = new Date(a.timestamp).getTime();
+            const timeB = new Date(b.timestamp).getTime();
+            return timeB - timeA;
+        });
+
+        const latestHistory = sortedHistory[0];
         if (latestHistory && typeof latestHistory === 'object' && 'notes' in latestHistory) {
             latestConditionNotes = (latestHistory as any).notes;
         }
@@ -453,6 +481,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
         const conditions: any[] = [
             eq(assets.id, id),
             eq(assets.platform_id, platformId),
+            isNull(assets.deleted_at),
         ];
 
         const [existingAsset] = await db
@@ -465,7 +494,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
         }
 
         // Step 2: Validate company if being updated
-        if (data.company_id) {
+        if (data.company_id && existingAsset.company_id !== data.company_id) {
             const [company] = await db
                 .select()
                 .from(companies)
@@ -483,7 +512,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
         }
 
         // Step 3: Validate warehouse if being updated
-        if (data.warehouse_id) {
+        if (data.warehouse_id && existingAsset.warehouse_id !== data.warehouse_id) {
             const [warehouse] = await db
                 .select()
                 .from(warehouses)
@@ -500,7 +529,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
         }
 
         // Step 4: Validate zone if being updated
-        if (data.zone_id) {
+        if (data.zone_id && existingAsset.zone_id !== data.zone_id) {
             const targetCompanyId = data.company_id || existingAsset.company_id;
             const targetWarehouseId = data.warehouse_id || existingAsset.warehouse_id;
 
@@ -521,7 +550,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
         }
 
         // Step 5: Validate brand if being updated
-        if (data.brand_id) {
+        if (data.brand_id && existingAsset.brand_id !== data.brand_id) {
             const targetCompanyId = data.company_id || existingAsset.company_id;
 
             const [brand] = await db
@@ -552,7 +581,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
             }
         }
 
-        // Step 7: Convert number fields to strings for database (decimal fields)
+        // Step 7: Build update data with decimal conversions
         const dbData: any = { ...data };
         if (data.weight_per_unit !== undefined) {
             dbData.weight_per_unit = data.weight_per_unit.toString();
@@ -561,7 +590,29 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
             dbData.volume_per_unit = data.volume_per_unit.toString();
         }
 
-        // Step 8: Update asset
+        // Step 8: Handle condition changes
+        if (data.condition !== undefined && data.condition !== existingAsset.condition) {
+            // Clear refurb estimate if changing to GREEN
+            if (data.condition === 'GREEN') {
+                dbData.refurb_days_estimate = null;
+            }
+
+            // Add condition change to history
+            const existingHistory = Array.isArray(existingAsset.condition_history)
+                ? existingAsset.condition_history
+                : [];
+
+            const newHistoryEntry = {
+                condition: data.condition,
+                notes: data.condition_notes || null,
+                updated_by: user.id,
+                timestamp: new Date().toISOString(),
+            };
+
+            dbData.condition_history = [newHistoryEntry, ...existingHistory];
+        }
+
+        // Step 9: Update asset
         const [result] = await db
             .update(assets)
             .set(dbData)
@@ -570,7 +621,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
 
         return result;
     } catch (error: any) {
-        // Step 9: Handle database errors
+        // Step 10: Handle database errors
         const pgError = error.cause || error;
 
         if (pgError.code === '23505') {

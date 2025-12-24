@@ -6,13 +6,14 @@ import { AssetServices } from "./assets.services";
 // ----------------------------------- CREATE ASSET -----------------------------------
 const createAsset = catchAsync(async (req, res) => {
     const platformId = (req as any).platformId;
+    const user = (req as any).user;
 
     const assetData = {
         ...req.body,
         platform_id: platformId,
     };
 
-    const result = await AssetServices.createAsset(assetData);
+    const result = await AssetServices.createAsset(assetData, user);
 
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
