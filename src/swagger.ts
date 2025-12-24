@@ -145,7 +145,12 @@ const swaggerDefinition = {
 
 const options = {
   swaggerDefinition,
-  apis: ["./src/app/**/*.swagger.ts", "./dist/app/**/*.swagger.js"],
+  // Use different paths for dev vs production
+  // In production, only compiled .js files exist in dist folder
+  // In development, we use .ts files from src folder
+  apis: process.env.NODE_ENV === 'production'
+    ? ["./dist/app/**/*.swagger.js"]
+    : ["./src/app/**/*.swagger.ts"],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
