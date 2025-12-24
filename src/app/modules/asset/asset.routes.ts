@@ -23,9 +23,9 @@ router.get("/", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetCo
 router.get("/:id", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetControllers.getAssetById);
 
 // Update asset
-router.patch("/:id", platformValidator, auth('ADMIN'), payloadValidator(AssetSchemas.updateAssetSchema), AssetControllers.updateAsset);
+router.patch("/:id", platformValidator, auth('ADMIN', 'LOGISTICS'), payloadValidator(AssetSchemas.updateAssetSchema), AssetControllers.updateAsset);
 
 // Delete asset
-router.delete("/:id", platformValidator, auth('ADMIN'), AssetControllers.deleteAsset);
+router.delete("/:id", platformValidator, auth('ADMIN', 'LOGISTICS'), AssetControllers.deleteAsset);
 
 export const AssetRoutes = router;

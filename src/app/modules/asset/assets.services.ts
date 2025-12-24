@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, ilike, isNull } from "drizzle-orm";
 import httpStatus from "http-status";
 import { db } from "../../../db";
-import { assets, brands, companies, orderItems, warehouses, zones } from "../../../db/schema";
+import { assets, brands, companies, warehouses, zones } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
 import { AuthUser } from "../../interface/common";
 import paginationMaker from "../../utils/pagination-maker";
@@ -647,6 +647,7 @@ const deleteAsset = async (id: string, user: AuthUser, platformId: string) => {
     const conditions: any[] = [
         eq(assets.id, id),
         eq(assets.platform_id, platformId),
+        isNull(assets.deleted_at),
     ];
 
     const [existingAsset] = await db
@@ -659,20 +660,29 @@ const deleteAsset = async (id: string, user: AuthUser, platformId: string) => {
     }
 
     // Step 2: Check if asset is referenced by any order items
-    const [orderItemReference] = await db
-        .select()
-        .from(orderItems)
-        .where(eq(orderItems.asset_id, id))
-        .limit(1);
+    // const [orderItemReference] = await db
+    //     .select()
+    //     .from(orderItems)
+    //     .where(eq(orderItems.asset_id, id))
+    //     .limit(1);
 
-    if (orderItemReference) {
-        throw new CustomizedError(
-            httpStatus.CONFLICT,
-            "Cannot delete asset because it is referenced by existing orders. You can deactivate it by setting status to MAINTENANCE instead."
-        );
+    // if (orderItemReference) {
+    //     throw new CustomizedError(
+    //         httpStatus.CONFLICT,
+    //         "Cannot delete asset because it is referenced by existing orders. You can deactivate it by setting status to MAINTENANCE instead."
+    //     );
+    // }
+
+    // Step 3: Check if asset is currently booked
+    const bookings = await db.query.assetBookings.findFirst({
+        where: eq(assets.id, id),
+    })
+
+    if (bookings) {
+        throw new CustomizedError(httpStatus.CONFLICT, 'Cannot delete asset that has active bookings')
     }
 
-    // Step 3: Soft delete asset (set deleted_at timestamp)
+    // Step 4: Soft delete asset (set deleted_at timestamp)
     await db
         .update(assets)
         .set({
