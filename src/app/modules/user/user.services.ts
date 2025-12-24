@@ -9,7 +9,7 @@ import { validDateChecker } from "../../utils/checker";
 import paginationMaker from "../../utils/pagination-maker";
 import queryValidator from "../../utils/query-validator";
 import { CreateUserPayload } from "./user.interfaces";
-import { userQueryValidationConfig } from "./user.utils";
+import { resolveUserPermissions, userQueryValidationConfig, validateRoleAndTemplate } from "./user.utils";
 
 // ----------------------------------- CREATE USER ------------------------------------
 const createUser = async (data: CreateUserPayload) => {
@@ -35,13 +35,23 @@ const createUser = async (data: CreateUserPayload) => {
       }
     }
 
+    // Step 1b: Validate role and permission template compatibility
+    validateRoleAndTemplate(data.role, data.permission_template);
+
     // Step 2: Hash the password
     const hashedPassword = await bcrypt.hash(data.password, config.salt_rounds);
+
+    // Step 2b: Resolve permissions based on template
+    const permissions = resolveUserPermissions(
+      data.permission_template,
+      data.permissions
+    );
 
     // Step 3: Prepare user data with hashed password
     const userData = {
       ...data,
       password: hashedPassword,
+      permissions,
     };
 
     // Step 4: Insert user into database
@@ -194,8 +204,62 @@ const getUserById = async (id: string, platformId: string) => {
   return user;
 };
 
+// ----------------------------------- UPDATE USER ------------------------------------
+const updateUser = async (
+  id: string,
+  platformId: string,
+  data: Partial<CreateUserPayload>
+) => {
+  // Step 1: Check if user exists
+  const existingUser = await getUserById(id, platformId);
+
+  // Only name, permission_template, and permissions can be updated
+  if (
+    data.email ||
+    data.password ||
+    data.role ||
+    data.company_id ||
+    data.is_active
+  ) {
+    throw new CustomizedError(
+      httpStatus.BAD_REQUEST,
+      "Only name, permission_template and permissions can be updated"
+    );
+  }
+
+
+  // Step 2: Validate role and permission template compatibility if template is being updated
+  if (data.permission_template) {
+    validateRoleAndTemplate(existingUser.role, data.permission_template);
+  }
+
+  let finalData = { ...data };
+  if (
+    data.permission_template !== undefined ||
+    data.permissions !== undefined
+  ) {
+    finalData.permissions = resolveUserPermissions(
+      data.permission_template,
+      data.permissions
+    );
+  }
+
+  // Step 3: Update user
+  const [result] = await db
+    .update(users)
+    .set({
+      ...finalData,
+      updated_at: new Date(),
+    })
+    .where(and(eq(users.id, id), eq(users.platform_id, platformId)))
+    .returning();
+
+  return result;
+};
+
 export const UserServices = {
   createUser,
   getUsers,
   getUserById,
+  updateUser,
 };

@@ -53,8 +53,24 @@ const getUserById = catchAsync(async (req, res, next) => {
   });
 });
 
+// ----------------------------------- UPDATE USER ------------------------------------
+const updateUser = catchAsync(async (req, res, next) => {
+  const platformId = (req as any).platformId;
+  const { id } = req.params;
+
+  const result = await UserServices.updateUser(id, platformId, req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User updated successfully",
+    data: result,
+  });
+});
+
 export const UserControllers = {
   createUser,
   getUsers,
   getUserById,
+  updateUser,
 };

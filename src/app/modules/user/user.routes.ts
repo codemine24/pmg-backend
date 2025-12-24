@@ -11,6 +11,7 @@ const router = Router();
 router.post(
   "/",
   platformValidator,
+  auth('ADMIN'),
   payloadValidator(UserSchemas.createUser),
   UserControllers.createUser
 );
@@ -29,6 +30,15 @@ router.get(
   platformValidator,
   auth('ADMIN', 'LOGISTICS'),
   UserControllers.getUserById
+);
+
+// Update user
+router.patch(
+  "/:id",
+  platformValidator,
+  auth("ADMIN"),
+  payloadValidator(UserSchemas.updateUser),
+  UserControllers.updateUser
 );
 
 export const UserRoutes = router;

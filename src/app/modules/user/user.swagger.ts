@@ -579,6 +579,107 @@
  *               $ref: '#/components/schemas/Error'
  *     security:
  *       - BearerAuth: []
+ *   patch:
+ *     tags:
+ *       - User Management
+ *     summary: Update a user
+ *     description: Updates an existing user's information. Only ADMIN users can update users.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: id
+ *         in: path
+ *         description: User unique identifier
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: User's full name
+ *                 example: "John Due"
+
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["orders.view"]
+ *               permission_template:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "CLIENT_USER"
+
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     platform_id:
+ *                       type: string
+ *                       format: uuid
+ *                     company_id:
+ *                       type: string
+ *                       format: uuid
+ *                       nullable: true
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     permissions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     permission_template:
+ *                       type: string
+ *                       nullable: true
+ *                     is_active:
+ *                       type: boolean
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Internal server error
+ *     security:
+ *       - BearerAuth: []
  */
 
 export const userSwagger = {};

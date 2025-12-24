@@ -38,34 +38,17 @@ const createUser = z.object({
 
 const updateUser = z.object({
   body: z.object({
-    company_id: z
-      .string()
-      .uuid("Company ID must be a valid UUID")
-      .optional()
-      .nullable(),
     name: z
       .string()
       .min(1, "Name cannot be empty")
       .max(100, "Name must be at most 100 characters")
       .optional(),
-    email: z
-      .string()
-      .email("Invalid email address")
-      .max(255, "Email must be at most 255 characters")
-      .optional(),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .max(255, "Password must be at most 255 characters")
-      .optional(),
-    role: z.enum(userRoleEnum.enumValues).optional(),
     permissions: z
       .array(z.string(), {
         error: "Permissions must be an array of strings",
       })
       .optional(),
     permission_template: permissionTemplateEnum.optional().nullable(),
-    is_active: z.boolean().optional(),
   }),
 });
 
