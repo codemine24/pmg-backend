@@ -147,6 +147,142 @@
 
 /**
  * @swagger
+ * /api/operations/v1/pricing-tier/calculate:
+ *   get:
+ *     tags:
+ *       - Pricing Tier Management
+ *     summary: Calculate pricing for given volume and location
+ *     description: |
+ *       Calculates the A2 base price and estimated total (including platform margin) for a given volume and location.
+ *       This is a utility endpoint for order creation. The endpoint finds the matching pricing tier based on country, city, and volume,
+ *       then applies the company's platform margin to calculate the estimated total.
+ *       
+ *       **Access:** Any authenticated user (ADMIN, LOGISTICS, CLIENT) can use this endpoint.
+ *       
+ *       **Note:** This returns a flat rate for the volume range, not a per-m³ rate.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: country
+ *         in: query
+ *         required: true
+ *         description: Country for pricing calculation
+ *         schema:
+ *           type: string
+ *         example: "United Arab Emirates"
+ *       - name: city
+ *         in: query
+ *         required: true
+ *         description: City for pricing calculation
+ *         schema:
+ *           type: string
+ *         example: "Dubai"
+ *       - name: volume
+ *         in: query
+ *         required: true
+ *         description: Volume in cubic meters (m³)
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         example: 5.5
+ *     responses:
+ *       200:
+ *         description: Pricing calculated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Pricing calculated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     pricing_tier_id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: ID of the matched pricing tier
+ *                       example: "tier-uuid-1"
+ *                     country:
+ *                       type: string
+ *                       description: Country from the matched tier
+ *                       example: "United Arab Emirates"
+ *                     city:
+ *                       type: string
+ *                       description: City from the matched tier
+ *                       example: "Dubai"
+ *                     volume_min:
+ *                       type: number
+ *                       description: Minimum volume of the matched tier (m³)
+ *                       example: 0
+ *                     volume_max:
+ *                       type: number
+ *                       nullable: true
+ *                       description: Maximum volume of the matched tier (m³), null for unlimited
+ *                       example: 10
+ *                     base_price:
+ *                       type: number
+ *                       description: A2 base/flat rate for this tier
+ *                       example: 100.50
+ *                     platform_margin_percent:
+ *                       type: number
+ *                       description: Platform margin percentage (from company settings or default 25%)
+ *                       example: 25.00
+ *                     platform_margin_amount:
+ *                       type: number
+ *                       description: Platform margin amount in currency
+ *                       example: 25.13
+ *                     estimated_total:
+ *                       type: number
+ *                       description: Final estimated total (base_price + platform_margin_amount)
+ *                       example: 125.63
+ *                     matched_volume:
+ *                       type: number
+ *                       description: The volume that was used for matching
+ *                       example: 5.5
+ *                     note:
+ *                       type: string
+ *                       description: Important note about pricing calculation
+ *                       example: "This is a flat rate for the volume range, not a per-m³ rate"
+ *       400:
+ *         description: Validation error - Missing or invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "volume must be a positive number"
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       404:
+ *         description: No matching pricing tier found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "No active pricing tier found for Dubai, United Arab Emirates with volume 5.5m³"
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
  * /api/operations/v1/pricing-tier:
  *   get:
  *     tags:
