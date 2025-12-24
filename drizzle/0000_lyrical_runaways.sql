@@ -3,6 +3,7 @@ CREATE TYPE "public"."asset_condition" AS ENUM('GREEN', 'ORANGE', 'RED');--> sta
 CREATE TYPE "public"."asset_status" AS ENUM('AVAILABLE', 'BOOKED', 'OUT', 'MAINTENANCE');--> statement-breakpoint
 CREATE TYPE "public"."discrepancy_reason" AS ENUM('BROKEN', 'LOST', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."financial_status" AS ENUM('PENDING_QUOTE', 'QUOTE_SENT', 'QUOTE_ACCEPTED', 'PENDING_INVOICE', 'INVOICED', 'PAID');--> statement-breakpoint
+CREATE TYPE "public"."hostname_type" AS ENUM('VANITY', 'CUSTOM');--> statement-breakpoint
 CREATE TYPE "public"."notification_status" AS ENUM('QUEUED', 'SENT', 'FAILED', 'RETRYING');--> statement-breakpoint
 CREATE TYPE "public"."order_status" AS ENUM('DRAFT', 'SUBMITTED', 'PRICING_REVIEW', 'PENDING_APPROVAL', 'QUOTED', 'DECLINED', 'CONFIRMED', 'IN_PREPARATION', 'READY_FOR_DELIVERY', 'IN_TRANSIT', 'DELIVERED', 'IN_USE', 'AWAITING_RETURN', 'CLOSED');--> statement-breakpoint
 CREATE TYPE "public"."scan_type" AS ENUM('OUTBOUND', 'INBOUND');--> statement-breakpoint
@@ -12,7 +13,7 @@ CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
 	"account_id" text NOT NULL,
 	"provider_id" text NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"access_token" text,
 	"refresh_token" text,
 	"id_token" text,
@@ -42,7 +43,7 @@ CREATE TABLE "asset_condition_history" (
 	"condition" "asset_condition" NOT NULL,
 	"notes" text,
 	"photos" text[] DEFAULT ARRAY[]::text[] NOT NULL,
-	"updated_by" text NOT NULL,
+	"updated_by" uuid NOT NULL,
 	"timestamp" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -136,7 +137,7 @@ CREATE TABLE "company_domains" (
 	"platform" uuid NOT NULL,
 	"company" uuid NOT NULL,
 	"hostname" text NOT NULL,
-	"type" varchar(30) NOT NULL,
+	"type" "hostname_type" NOT NULL,
 	"is_verified" boolean DEFAULT false,
 	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -183,7 +184,7 @@ CREATE TABLE "order_status_history" (
 	"order" uuid NOT NULL,
 	"status" "order_status" NOT NULL,
 	"notes" text,
-	"updated_by" text NOT NULL,
+	"updated_by" uuid NOT NULL,
 	"timestamp" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -264,7 +265,7 @@ CREATE TABLE "scan_events" (
 	"notes" text,
 	"photos" text[] DEFAULT ARRAY[]::text[],
 	"discrepancy_reason" "discrepancy_reason",
-	"scanned_by" text NOT NULL,
+	"scanned_by" uuid NOT NULL,
 	"scanned_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -276,7 +277,7 @@ CREATE TABLE "session" (
 	"updated_at" timestamp NOT NULL,
 	"ip_address" text,
 	"user_agent" text,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	CONSTRAINT "session_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
@@ -292,7 +293,7 @@ CREATE TABLE "users" (
 	"permission_template" varchar(50),
 	"is_active" boolean DEFAULT true NOT NULL,
 	"last_login_at" timestamp,
-	"created_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint

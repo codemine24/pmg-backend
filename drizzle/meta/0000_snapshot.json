@@ -1,5 +1,5 @@
 {
-  "id": "fcce6d55-2cfa-4f40-b2cd-8b0fabbb4270",
+  "id": "7dd1ec35-5901-4419-91ec-5245c61d0c8b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -28,7 +28,7 @@
         },
         "user_id": {
           "name": "user_id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -282,7 +282,7 @@
         },
         "updated_by": {
           "name": "updated_by",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -1193,7 +1193,8 @@
         },
         "type": {
           "name": "type",
-          "type": "varchar(30)",
+          "type": "hostname_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -1691,7 +1692,7 @@
         },
         "updated_by": {
           "name": "updated_by",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -2456,7 +2457,7 @@
         },
         "scanned_by": {
           "name": "scanned_by",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -2564,7 +2565,7 @@
         },
         "user_id": {
           "name": "user_id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         }
@@ -2694,7 +2695,8 @@
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
@@ -3131,6 +3133,14 @@
         "PENDING_INVOICE",
         "INVOICED",
         "PAID"
+      ]
+    },
+    "public.hostname_type": {
+      "name": "hostname_type",
+      "schema": "public",
+      "values": [
+        "VANITY",
+        "CUSTOM"
       ]
     },
     "public.notification_status": {

@@ -15,19 +15,21 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
     },
   ];
 
-  // Helper to extract Postgres error details
-  if ((error as any).code && (error as any).detail) {
-    errorSources.push({
-      path: "",
-      message: `DB Error Code: ${(error as any).code}, Detail: ${(error as any).detail}`
-    })
-  }
+  const pgError = error.cause || error;
 
   if (error instanceof ZodError) {
     const simplifiedError = zodErrorHandler(error);
     statusCode = simplifiedError.statusCode;
     message = simplifiedError.message;
     errorSources = simplifiedError.errorSources;
+  } else if (pgError.code === '23505') {
+    // PostgreSQL unique constraint violation
+    statusCode = httpStatus.CONFLICT;
+    message = pgError.detail || 'Duplicate record detected';
+  } else if (pgError.code === '23503') {
+    // PostgreSQL foreign key constraint violation
+    statusCode = httpStatus.BAD_REQUEST;
+    message = 'Referenced record does not exist';
   } else if (error.message === "jwt expired") {
     statusCode = httpStatus.UNAUTHORIZED;
     message = "Token has been expired";

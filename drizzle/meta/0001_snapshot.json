@@ -1,6 +1,6 @@
 {
-  "id": "b5959775-8973-43b8-8c07-aaa64ed85037",
-  "prevId": "fcce6d55-2cfa-4f40-b2cd-8b0fabbb4270",
+  "id": "de19b98e-56cd-4f5d-b630-e61539c20dea",
+  "prevId": "7dd1ec35-5901-4419-91ec-5245c61d0c8b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1088,6 +1088,25 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
+        "platform_margin_percent": {
+          "name": "platform_margin_percent",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'25.00'"
+        },
+        "contact_email": {
+          "name": "contact_email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_phone": {
+          "name": "contact_phone",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "is_active": {
           "name": "is_active",
           "type": "boolean",
@@ -1193,7 +1212,8 @@
         },
         "type": {
           "name": "type",
-          "type": "varchar(30)",
+          "type": "hostname_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -2694,7 +2714,8 @@
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
@@ -3131,6 +3152,14 @@
         "PENDING_INVOICE",
         "INVOICED",
         "PAID"
+      ]
+    },
+    "public.hostname_type": {
+      "name": "hostname_type",
+      "schema": "public",
+      "values": [
+        "VANITY",
+        "CUSTOM"
       ]
     },
     "public.notification_status": {

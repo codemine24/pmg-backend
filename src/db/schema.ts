@@ -113,9 +113,9 @@ export const platforms = pgTable(
     domain: varchar('domain', { length: 100 }).notNull().unique(),
     config: jsonb('config').default({}).notNull(),
     features: jsonb('features').default({}).notNull(),
-    isActive: boolean('is_active').default(true).notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
+    is_active: boolean('is_active').default(true).notNull(),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at')
       .$onUpdate(() => new Date())
       .notNull(),
   },
@@ -144,22 +144,30 @@ export const companies = pgTable(
   'companies',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 100 }).notNull(),
     domain: varchar('domain', { length: 50 }).notNull(), // Subdomain
     settings: jsonb('settings').default({}).notNull(),
-    isActive: boolean('is_active').default(true).notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
+    platform_margin_percent: decimal('platform_margin_percent', {
+      precision: 5,
+      scale: 2,
+    })
+      .notNull()
+      .default('25.00'),
+    contact_email: varchar('contact_email', { length: 255 }),
+    contact_phone: varchar('contact_phone', { length: 50 }),
+    is_active: boolean('is_active').default(true).notNull(),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at')
       .$onUpdate(() => new Date())
       .notNull(),
     deleted_at: timestamp('deleted_at'),
   },
   (table) => [
-    index('companies_platform_idx').on(table.platform),
-    unique('companies_platform_domain_unique').on(table.platform, table.domain), // Domain must be unique within a platform
+    index('companies_platform_idx').on(table.platform_id),
+    unique('companies_platform_domain_unique').on(table.platform_id, table.domain), // Domain must be unique within a platform
   ]
 )
 
@@ -167,25 +175,25 @@ export const companyDomains = pgTable(
   'company_domains',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company')
+    company_id: uuid('company')
       .notNull()
       .references(() => companies.id, { onDelete: 'cascade' }),
     hostname: text('hostname').notNull().unique(), // e.g., 'client.diageo.com' or 'diageo.pmg-platform.com'
     type: hostnameTypeEnum('type').notNull(),
-    isVerified: boolean('is_verified').default(false),
-    isActive: boolean('is_active').default(true),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    is_verified: boolean('is_verified').default(false),
+    is_active: boolean('is_active').default(true),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
   },
   (table) => [index('company_domains_hostname_idx').on(table.hostname)]
 )
 
 export const companiesRelations = relations(companies, ({ one, many }) => ({
   platform: one(platforms, {
-    fields: [companies.platform],
+    fields: [companies.platform_id],
     references: [platforms.id],
   }),
   domains: many(companyDomains),
@@ -199,11 +207,11 @@ export const companiesRelations = relations(companies, ({ one, many }) => ({
 
 export const companyDomainsRelations = relations(companyDomains, ({ one }) => ({
   company: one(companies, {
-    fields: [companyDomains.company],
+    fields: [companyDomains.company_id],
     references: [companies.id],
   }),
   platform: one(platforms, {
-    fields: [companyDomains.platform],
+    fields: [companyDomains.platform_id],
     references: [platforms.id],
   }),
 }))
@@ -213,10 +221,10 @@ export const users = pgTable(
   'users',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company').references(() => companies.id), // Multi-tenancy: Client users belong to a company, Admin/Logistics are null
+    company_id: uuid('company').references(() => companies.id), // Multi-tenancy: Client users belong to a company, Admin/Logistics are null
     name: varchar('name', { length: 100 }).notNull(),
     email: varchar('email', { length: 255 }).notNull(),
     password: varchar('password', { length: 255 }).notNull(), // hashed password
@@ -226,34 +234,34 @@ export const users = pgTable(
       .notNull()
       .default(sql`ARRAY[]::text[]`),
     permission_template: varchar('permission_template', { length: 50 }), // PLATFORM_ADMIN, LOGISTICS_STAFF, CLIENT_USER
-    isActive: boolean('is_active').notNull().default(true),
-    lastLoginAt: timestamp('last_login_at'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
+    is_active: boolean('is_active').notNull().default(true),
+    last_login_at: timestamp('last_login_at'),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at')
       .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
-    index('user_platform_idx').on(table.platform),
-    index('user_company_idx').on(table.company),
+    index('user_platform_idx').on(table.platform_id),
+    index('user_company_idx').on(table.company_id),
     // IMPORTANT: Email is unique PER PLATFORM, not globally
-    uniqueIndex('user_platform_email_unique').on(table.platform, table.email),
+    uniqueIndex('user_platform_email_unique').on(table.platform_id, table.email),
   ]
 )
 
 export const userRelations = relations(users, ({ one, many }) => ({
   platform: one(platforms, {
-    fields: [users.platform],
+    fields: [users.platform_id],
     references: [platforms.id],
   }),
   company: one(companies, {
-    fields: [users.company],
+    fields: [users.company_id],
     references: [companies.id],
   }),
   sessions: many(session),
   accounts: many(account),
   orders: many(orders),
-  scannedAssets: many(assets), // For lastScannedBy
+  scanned_assets: many(assets), // For lastScannedBy
 }))
 
 // ---------------------------------- BRAND -----------------------------------------------
@@ -261,33 +269,33 @@ export const brands = pgTable(
   'brands',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-        .notNull()
-        .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company')
+    platform_id: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    company_id: uuid('company')
       .notNull()
       .references(() => companies.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 100 }).notNull(),
     description: text('description'),
-    logoUrl: text('logo_url'),
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
+    logo_url: text('logo_url'),
+    is_active: boolean('is_active').notNull().default(true),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at')
       .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
-    unique('brands_company_name_unique').on(table.company, table.name),
+    unique('brands_company_name_unique').on(table.company_id, table.name),
   ]
 )
 
 export const brandsRelations = relations(brands, ({ one, many }) => ({
   platform: one(platforms, {
-    fields: [brands.platform],
+    fields: [brands.platform_id],
     references: [platforms.id],
   }),
   company: one(companies, {
-    fields: [brands.company],
+    fields: [brands.company_id],
     references: [companies.id],
   }),
   assets: many(assets),
@@ -299,7 +307,7 @@ export const warehouses = pgTable(
   'warehouses',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 100 }).notNull(),
@@ -307,24 +315,24 @@ export const warehouses = pgTable(
     city: varchar('city', { length: 50 }).notNull(),
     address: text('address').notNull(),
     coordinates: jsonb('coordinates'), // GPS coordinates {lat, lng}
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
+    is_active: boolean('is_active').notNull().default(true),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at')
       .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
-    unique('warehouses_platform_name_unique').on(table.platform, table.name),
+    unique('warehouses_platform_name_unique').on(table.platform_id, table.name),
   ]
 )
 
 export const warehousesRelations = relations(warehouses, ({ one, many }) => ({
-    platform: one(platforms, {
-        fields: [warehouses.platform],
-        references: [platforms.id],
-    }),
-    zones: many(zones),
-    assets: many(assets),
+  platform: one(platforms, {
+    fields: [warehouses.platform_id],
+    references: [platforms.id],
+  }),
+  zones: many(zones),
+  assets: many(assets),
 }))
 
 // ---------------------------------- ZONES -----------------------------------------------
@@ -332,47 +340,47 @@ export const zones = pgTable(
   'zones',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
-        .notNull()
-        .references(() => platforms.id, { onDelete: 'cascade' }),
-    warehouse: uuid('warehouse')
+    platform_id: uuid('platform')
+      .notNull()
+      .references(() => platforms.id, { onDelete: 'cascade' }),
+    warehouse_id: uuid('warehouse')
       .notNull()
       .references(() => warehouses.id),
-    company: uuid('company')
+    company_id: uuid('company')
       .notNull()
       .references(() => companies.id),
     name: varchar('name', { length: 50 }).notNull(),
     description: text('description'),
     capacity: integer('capacity'),
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
+    is_active: boolean('is_active').notNull().default(true),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at')
       .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
     unique('zones_warehouse_company_name_unique').on(
-      table.warehouse,
-      table.company,
+      table.warehouse_id,
+      table.company_id,
       table.name
     ),
   ]
 )
 
 export const zonesRelations = relations(zones, ({ one, many }) => ({
-    platform: one(platforms, {
-        fields: [zones.platform],
-        references: [platforms.id],
-    }),
-    warehouse: one(warehouses, {
-        fields: [zones.warehouse],
-        references: [warehouses.id],
-    }),
-    company: one(companies, {
-        fields: [zones.company],
-        references: [companies.id],
-    }),
-    assets: many(assets),
+  platform: one(platforms, {
+    fields: [zones.platform_id],
+    references: [platforms.id],
+  }),
+  warehouse: one(warehouses, {
+    fields: [zones.warehouse_id],
+    references: [warehouses.id],
+  }),
+  company: one(companies, {
+    fields: [zones.company_id],
+    references: [companies.id],
+  }),
+  assets: many(assets),
 }))
 
 // ---------------------------------- ASSET -----------------------------------------------
@@ -380,19 +388,19 @@ export const assets = pgTable(
   'assets',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company')
+    company_id: uuid('company')
       .notNull()
       .references(() => companies.id, { onDelete: 'cascade' }),
-    warehouse: uuid('warehouse')
+    warehouse_id: uuid('warehouse')
       .notNull()
       .references(() => warehouses.id),
-    zone: uuid('zone')
+    zone_id: uuid('zone')
       .notNull()
       .references(() => zones.id),
-    brand: uuid('brand').references(() => brands.id),
+    brand_id: uuid('brand').references(() => brands.id),
     name: varchar('name', { length: 200 }).notNull(),
     description: text('description'),
     category: assetCategoryEnum('category').notNull(),
@@ -400,49 +408,49 @@ export const assets = pgTable(
       .array()
       .notNull()
       .default(sql`ARRAY[]::text[]`),
-    trackingMethod: trackingMethodEnum('tracking_method').notNull(),
-    totalQuantity: integer('total_quantity').notNull().default(1),
-    availableQuantity: integer('available_quantity').notNull().default(1),
-    qrCode: varchar('qr_code', { length: 100 }).notNull().unique(),
+    tracking_method: trackingMethodEnum('tracking_method').notNull(),
+    total_quantity: integer('total_quantity').notNull().default(1),
+    available_quantity: integer('available_quantity').notNull().default(1),
+    qr_code: varchar('qr_code', { length: 100 }).notNull().unique(),
     packaging: varchar('packaging', { length: 100 }),
-    weightPerUnit: decimal('weight_per_unit', { precision: 8, scale: 2 }).notNull(), // in kilograms
+    weight_per_unit: decimal('weight_per_unit', { precision: 8, scale: 2 }).notNull(), // in kilograms
     dimensions: jsonb('dimensions').default({}).notNull(), // {length, width, height} in cm
-    volumePerUnit: decimal('volume_per_unit', { precision: 8, scale: 3 }).notNull(), // in cubic meters
+    volume_per_unit: decimal('volume_per_unit', { precision: 8, scale: 3 }).notNull(), // in cubic meters
     condition: assetConditionEnum('condition').notNull().default('GREEN'),
-    conditionNotes: text('condition_notes'),
-    refurbDaysEstimate: integer('refurb_days_estimate'), // Estimated days until available (for Red condition)
-    conditionHistory: jsonb('condition_history').default([]),
-    handlingTags: text('handling_tags')
+    condition_notes: text('condition_notes'),
+    refurb_days_estimate: integer('refurb_days_estimate'), // Estimated days until available (for Red condition)
+    condition_history: jsonb('condition_history').default([]),
+    handling_tags: text('handling_tags')
       .array()
       .notNull()
       .default(sql`ARRAY[]::text[]`),
     status: assetStatusEnum('status').notNull().default('AVAILABLE'),
-    lastScannedAt: timestamp('last_scanned_at'),
-    lastScannedBy: uuid('last_scanned_by').references(() => users.id),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
+    last_scanned_at: timestamp('last_scanned_at'),
+    last_scanned_by: uuid('last_scanned_by').references(() => users.id),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at')
       .$onUpdate(() => new Date())
       .notNull(),
-    deletedAt: timestamp('deleted_at'),
+    deleted_at: timestamp('deleted_at'),
   },
   (table) => [
-    index('assets_platform_idx').on(table.platform),
-    index('assets_company_idx').on(table.company),
-    index('assets_qr_code_idx').on(table.qrCode),
+    index('assets_platform_idx').on(table.platform_id),
+    index('assets_company_idx').on(table.company_id),
+    index('assets_qr_code_idx').on(table.qr_code),
   ]
 )
 
 export const assetsRelations = relations(assets, ({ one, many }) => ({
-    company: one(companies, { fields: [assets.company], references: [companies.id] }),
-    platform: one(platforms, { fields: [assets.platform], references: [platforms.id] }),
-    brand: one(brands, { fields: [assets.brand], references: [brands.id] }),
-    warehouse: one(warehouses, { fields: [assets.warehouse], references: [warehouses.id] }),
-    zone: one(zones, { fields: [assets.zone], references: [zones.id] }),
-    lastScannedByUser: one(users, { fields: [assets.lastScannedBy], references: [users.id] }),
-    collectionItems: many(collectionItems),
-    orderItems: many(orderItems),
-    scanEvents: many(scanEvents),
-    bookings: many(assetBookings),
+  company: one(companies, { fields: [assets.company_id], references: [companies.id] }),
+  platform: one(platforms, { fields: [assets.platform_id], references: [platforms.id] }),
+  brand: one(brands, { fields: [assets.brand_id], references: [brands.id] }),
+  warehouse: one(warehouses, { fields: [assets.warehouse_id], references: [warehouses.id] }),
+  zone: one(zones, { fields: [assets.zone_id], references: [zones.id] }),
+  last_scanned_by_user: one(users, { fields: [assets.last_scanned_by], references: [users.id] }),
+  collection_items: many(collectionItems),
+  order_items: many(orderItems),
+  scan_events: many(scanEvents),
+  bookings: many(assetBookings),
 }))
 
 // ---------------------------------- COLLECTION ------------------------------------------
@@ -450,13 +458,13 @@ export const collections = pgTable(
   'collections',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    company: uuid('company')
+    company_id: uuid('company')
       .notNull()
       .references(() => companies.id),
-    brand: uuid('brand').references(() => brands.id),
+    brand_id: uuid('brand').references(() => brands.id),
     name: varchar('name', { length: 200 }).notNull(),
     description: text('description'),
     images: text('images')
@@ -464,31 +472,31 @@ export const collections = pgTable(
       .notNull()
       .default(sql`ARRAY[]::text[]`),
     category: varchar('category', { length: 50 }),
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
-    deletedAt: timestamp('deleted_at'),
+    is_active: boolean('is_active').notNull().default(true),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    deleted_at: timestamp('deleted_at'),
   },
   (table) => [
-    index('collections_company_idx').on(table.company),
+    index('collections_company_idx').on(table.company_id),
   ]
 )
 
 export const collectionRelations = relations(collections, ({ one, many }) => ({
-    platform: one(platforms, {
-        fields: [collections.platform],
-        references: [platforms.id],
-    }),
-    company: one(companies, {
-        fields: [collections.company],
-        references: [companies.id],
-    }),
-    brand: one(brands, {
-        fields: [collections.brand],
-        references: [brands.id],
-    }),
+  platform: one(platforms, {
+    fields: [collections.platform_id],
+    references: [platforms.id],
+  }),
+  company: one(companies, {
+    fields: [collections.company_id],
+    references: [companies.id],
+  }),
+  brand: one(brands, {
+    fields: [collections.brand_id],
+    references: [brands.id],
+  }),
   assets: many(collectionItems),
-    orders: many(orders),
+  orders: many(orders),
 }))
 
 // ---------------------------------- COLLECTION ITEM --------------------------------------
@@ -502,10 +510,10 @@ export const collectionItems = pgTable(
     asset: uuid('asset')
       .notNull()
       .references(() => assets.id),
-    defaultQuantity: integer('default_quantity').notNull().default(1),
+    default_quantity: integer('default_quantity').notNull().default(1),
     notes: text('notes'),
-    displayOrder: integer('display_order'), // Sort order in collection
-    createdAt: timestamp('created_at').notNull().defaultNow(), 
+    display_order: integer('display_order'), // Sort order in collection
+    created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [
     unique('collection_items_unique').on(table.collection, table.asset),
@@ -513,8 +521,8 @@ export const collectionItems = pgTable(
 )
 
 export const collectionItemsRelations = relations(collectionItems, ({ one }) => ({
-    collection: one(collections, { fields: [collectionItems.collection], references: [collections.id] }),
-    asset: one(assets, { fields: [collectionItems.asset], references: [assets.id] }),
+  collection: one(collections, { fields: [collectionItems.collection], references: [collections.id] }),
+  asset: one(assets, { fields: [collectionItems.asset], references: [assets.id] }),
 }))
 
 // ---------------------------------- PRICING TIER -----------------------------------------
@@ -522,27 +530,27 @@ export const pricingTiers = pgTable(
   'pricing_tiers',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
     country: varchar('country', { length: 50 }).notNull(),
     city: varchar('city', { length: 50 }).notNull(),
-    volumeMin: decimal('volume_min', { precision: 8, scale: 3 }).notNull(),
-    volumeMax: decimal('volume_max', { precision: 8, scale: 3 }),
-    basePrice: decimal('base_price', { precision: 10, scale: 2 }).notNull(),
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at')
+    volume_min: decimal('volume_min', { precision: 8, scale: 3 }).notNull(),
+    volume_max: decimal('volume_max', { precision: 8, scale: 3 }),
+    base_price: decimal('base_price', { precision: 10, scale: 2 }).notNull(),
+    is_active: boolean('is_active').notNull().default(true),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at')
       .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
     index('pricing_tiers_platform_location_idx').on(
-      table.platform,
+      table.platform_id,
       table.country,
       table.city
     ),
-    unique('pricing_tiers_unique').on(table.platform, table.country, table.city, table.volumeMin, table.volumeMax),
+    unique('pricing_tiers_unique').on(table.platform_id, table.country, table.city, table.volume_min, table.volume_max),
   ]
 )
 
@@ -552,90 +560,90 @@ export const orders = pgTable(
   {
     // Core identifiers
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    orderId: varchar('order_id', { length: 20 }).notNull(), // Human-readable ID (ORD-YYYYMMDD-XXX)
-    company: uuid('company')
+    order_id: varchar('order_id', { length: 20 }).notNull(), // Human-readable ID (ORD-YYYYMMDD-XXX)
+    company_id: uuid('company')
       .notNull()
       .references(() => companies.id),
-    brand: uuid('brand').references(() => brands.id),
-    userId: uuid('user_id')
+    brand_id: uuid('brand').references(() => brands.id),
+    user_id: uuid('user_id')
       .notNull()
       .references(() => users.id),
-    jobNumber: varchar('job_number', { length: 50 }),
-    
+    job_number: varchar('job_number', { length: 50 }),
+
     // Contact information
-    contactName: varchar('contact_name', { length: 100 }).notNull(),
-    contactEmail: varchar('contact_email', { length: 255 }).notNull(),
-    contactPhone: varchar('contact_phone', { length: 50 }).notNull(),
-    
+    contact_name: varchar('contact_name', { length: 100 }).notNull(),
+    contact_email: varchar('contact_email', { length: 255 }).notNull(),
+    contact_phone: varchar('contact_phone', { length: 50 }).notNull(),
+
     // Event details
-    eventStartDate: timestamp('event_start_date', { mode: 'date' }).notNull(),
-    eventEndDate: timestamp('event_end_date', { mode: 'date' }).notNull(),
-    venueName: varchar('venue_name', { length: 200 }).notNull(),
-    venueLocation: jsonb('venue_location').notNull(), // {country, city, address, access_notes}
-    specialInstructions: text('special_instructions'),
-    
+    event_start_date: timestamp('event_start_date', { mode: 'date' }).notNull(),
+    event_end_date: timestamp('event_end_date', { mode: 'date' }).notNull(),
+    venue_name: varchar('venue_name', { length: 200 }).notNull(),
+    venue_location: jsonb('venue_location').notNull(), // {country, city, address, access_notes}
+    special_instructions: text('special_instructions'),
+
     // Logistics windows
-    deliveryWindow: jsonb('delivery_window'), // {start, end} datetime
-    pickupWindow: jsonb('pickup_window'), // {start, end} datetime
-    
+    delivery_window: jsonb('delivery_window'), // {start, end} datetime
+    pickup_window: jsonb('pickup_window'), // {start, end} datetime
+
     // Calculations
-    calculatedTotals: jsonb('calculated_totals').notNull(), // {volume, weight} totals
-    
+    calculated_totals: jsonb('calculated_totals').notNull(), // {volume, weight} totals
+
     // Pricing
     tier_id: uuid('tier').references(() => pricingTiers.id),
-    logisticsPricing: jsonb('logistics_pricing'), // {base_price, adjusted_price, adjustment_reason, adjusted_at, adjusted_by}
-    platformPricing: jsonb('platform_pricing'), // {margin_percent, margin_amount, reviewed_at, reviewed_by, notes}
-    finalPricing: jsonb('final_pricing'), // {total_price, quote_sent_at}
-    
+    logistics_pricing: jsonb('logistics_pricing'), // {base_price, adjusted_price, adjustment_reason, adjusted_at, adjusted_by}
+    platform_pricing: jsonb('platform_pricing'), // {margin_percent, margin_amount, reviewed_at, reviewed_by, notes}
+    final_pricing: jsonb('final_pricing'), // {total_price, quote_sent_at}
+
     // Invoicing
-    invoiceId: varchar('invoice_id', { length: 30 }), // TODO: reference
-    invoiceGeneratedAt: timestamp('invoice_generated_at'),
-    invoicePaidAt: timestamp('invoice_paid_at'),
-    paymentMethod: varchar('payment_method', { length: 50 }),
-    paymentReference: varchar('payment_reference', { length: 100 }),
-    
+    invoice_id: varchar('invoice_id', { length: 30 }), // TODO: reference
+    invoice_generated_at: timestamp('invoice_generated_at'),
+    invoice_paid_at: timestamp('invoice_paid_at'),
+    payment_method: varchar('payment_method', { length: 50 }),
+    payment_reference: varchar('payment_reference', { length: 100 }),
+
     // Status tracking
-    orderStatus: orderStatusEnum('order_status').notNull().default('DRAFT'),
-    financialStatus: financialStatusEnum('financial_status').notNull().default('PENDING_QUOTE'),
-    orderStatusHistory: jsonb('order_status_history').default('[]'),
-    financialStatusHistory: jsonb('financial_status_history').default('[]'),
-    
+    order_status: orderStatusEnum('order_status').notNull().default('DRAFT'),
+    financial_status: financialStatusEnum('financial_status').notNull().default('PENDING_QUOTE'),
+    order_status_history: jsonb('order_status_history').default('[]'),
+    financial_status_history: jsonb('financial_status_history').default('[]'),
+
     // Scanning & photos
-    scanningData: jsonb('scanning_data').default('{}'), // {scanned_out: [], scanned_in: []}
-    deliveryPhotos: text('delivery_photos').array().default(sql`ARRAY[]::text[]`),
-    
+    scanning_data: jsonb('scanning_data').default('{}'), // {scanned_out: [], scanned_in: []}
+    delivery_photos: text('delivery_photos').array().default(sql`ARRAY[]::text[]`),
+
     // Timestamps
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
-    deletedAt: timestamp('deleted_at'),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    deleted_at: timestamp('deleted_at'),
   },
   (table) => [
     // Order ID unique per platform
-    unique('orders_platform_order_id_unique').on(table.platform, table.orderId),
+    unique('orders_platform_order_id_unique').on(table.platform_id, table.order_id),
     // Invoice ID unique per platform when not null
-    unique('orders_platform_invoice_id_unique').on(table.platform, table.invoiceId),
-    
+    unique('orders_platform_invoice_id_unique').on(table.platform_id, table.invoice_id),
+
     // Indexes for performance
-    index('orders_platform_company_idx').on(table.platform, table.company),
-    index('orders_status_idx').on(table.orderStatus),
-    index('orders_financial_status_idx').on(table.financialStatus),
-    index('orders_event_date_idx').on(table.eventStartDate),
-    index('orders_created_at_idx').on(table.createdAt),
+    index('orders_platform_company_idx').on(table.platform_id, table.company_id),
+    index('orders_status_idx').on(table.order_status),
+    index('orders_financial_status_idx').on(table.financial_status),
+    index('orders_event_date_idx').on(table.event_start_date),
+    index('orders_created_at_idx').on(table.created_at),
   ]
 );
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
-    platform: one(platforms, { fields: [orders.platform], references: [platforms.id] }),
-  company: one(companies, { fields: [orders.company], references: [companies.id] }),
-    brand: one(brands, { fields: [orders.brand], references: [brands.id] }),
-    user: one(users, { fields: [orders.userId], references: [users.id] }),
-    pricingTier: one(pricingTiers, { fields: [orders.tier_id], references: [pricingTiers.id] }),
-    items: many(orderItems),
-    scanEvents: many(scanEvents),
-    assetBookings: many(assetBookings),
+  platform: one(platforms, { fields: [orders.platform_id], references: [platforms.id] }),
+  company: one(companies, { fields: [orders.company_id], references: [companies.id] }),
+  brand: one(brands, { fields: [orders.brand_id], references: [brands.id] }),
+  user: one(users, { fields: [orders.user_id], references: [users.id] }),
+  pricing_tier: one(pricingTiers, { fields: [orders.tier_id], references: [pricingTiers.id] }),
+  items: many(orderItems),
+  scan_events: many(scanEvents),
+  asset_bookings: many(assetBookings),
 }))
 
 // ---------------------------------- ORDER ITEM -------------------------------------------
@@ -643,45 +651,45 @@ export const orderItems = pgTable(
   'order_items',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    order: uuid('order')
+    order_id: uuid('order')
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
-    asset: uuid('asset')
+    asset_id: uuid('asset')
       .notNull()
       .references(() => assets.id),
-    
+
     // Snapshot data
-    assetName: varchar('asset_name', { length: 200 }).notNull(),
+    asset_name: varchar('asset_name', { length: 200 }).notNull(),
     quantity: integer('quantity').notNull(),
-    volumePerUnit: decimal('volume_per_unit', { precision: 8, scale: 3 }).notNull(),
-    weightPerUnit: decimal('weight_per_unit', { precision: 8, scale: 2 }).notNull(),
-    totalVolume: decimal('total_volume', { precision: 8, scale: 3 }).notNull(),
-    totalWeight: decimal('total_weight', { precision: 8, scale: 2 }).notNull(),
-    conditionNotes: text('condition_notes'),
-    handlingTags: text('handling_tags').array().default(sql`ARRAY[]::text[]`),
-    
-    fromCollection: uuid('from_collection').references(() => collections.id),
-    fromCollectionName: varchar('from_collection_name', { length: 200 }),
-    
-    createdAt: timestamp('created_at').notNull().defaultNow(),
+    volume_per_unit: decimal('volume_per_unit', { precision: 8, scale: 3 }).notNull(),
+    weight_per_unit: decimal('weight_per_unit', { precision: 8, scale: 2 }).notNull(),
+    total_volume: decimal('total_volume', { precision: 8, scale: 3 }).notNull(),
+    total_weight: decimal('total_weight', { precision: 8, scale: 2 }).notNull(),
+    condition_notes: text('condition_notes'),
+    handling_tags: text('handling_tags').array().default(sql`ARRAY[]::text[]`),
+
+    from_collection: uuid('from_collection').references(() => collections.id),
+    from_collection_name: varchar('from_collection_name', { length: 200 }),
+
+    created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [
     // Indexes for performance
-    index('order_items_order_idx').on(table.order),
-    index('order_items_asset_idx').on(table.asset),
-    index('order_items_platform_idx').on(table.platform),
-    index('order_items_from_collection_idx').on(table.fromCollection),
+    index('order_items_order_idx').on(table.order_id),
+    index('order_items_asset_idx').on(table.asset_id),
+    index('order_items_platform_idx').on(table.platform_id),
+    index('order_items_from_collection_idx').on(table.from_collection),
   ]
 );
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
-    platform: one(platforms, { fields: [orderItems.platform], references: [platforms.id] }),
-    order: one(orders, { fields: [orderItems.order], references: [orders.id] }),
-    asset: one(assets, { fields: [orderItems.asset], references: [assets.id] }),
-    from_collection: one(collections, { fields: [orderItems.fromCollection], references: [collections.id] }),
+  platform: one(platforms, { fields: [orderItems.platform_id], references: [platforms.id] }),
+  order: one(orders, { fields: [orderItems.order_id], references: [orders.id] }),
+  asset: one(assets, { fields: [orderItems.asset_id], references: [assets.id] }),
+  from_collection: one(collections, { fields: [orderItems.from_collection], references: [collections.id] }),
 }))
 
 
@@ -691,17 +699,17 @@ export const session = pgTable(
   'session',
   {
     id: text('id').primaryKey(),
-    expiresAt: timestamp('expires_at').notNull(),
+    expires_at: timestamp('expires_at').notNull(),
     token: text('token').notNull().unique(),
-    createdAt: timestamp('created_at').notNull(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
-    ipAddress: text('ip_address'),
-    userAgent: text('user_agent'),
-    userId: uuid('user_id')
+    created_at: timestamp('created_at').notNull(),
+    updated_at: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    ip_address: text('ip_address'),
+    user_agent: text('user_agent'),
+    user_id: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
   },
-  (table) => [index('session_userId_idx').on(table.userId)]
+  (table) => [index('session_userId_idx').on(table.user_id)]
 )
 
 // ---------------------------------- ACCOUNT ----------------------------------------------
@@ -709,22 +717,22 @@ export const account = pgTable(
   'account',
   {
     id: text('id').primaryKey(),
-    accountId: text('account_id').notNull(),
-    providerId: text('provider_id').notNull(),
-    userId: uuid('user_id')
+    account_id: text('account_id').notNull(),
+    provider_id: text('provider_id').notNull(),
+    user_id: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    accessToken: text('access_token'),
-    refreshToken: text('refresh_token'),
-    idToken: text('id_token'),
-    accessTokenExpiresAt: timestamp('access_token_expires_at'),
-    refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
+    access_token: text('access_token'),
+    refresh_token: text('refresh_token'),
+    id_token: text('id_token'),
+    access_token_expires_at: timestamp('access_token_expires_at'),
+    refresh_token_expires_at: timestamp('refresh_token_expires_at'),
     scope: text('scope'),
     password: text('password'),
-    createdAt: timestamp('created_at').notNull(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    created_at: timestamp('created_at').notNull(),
+    updated_at: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
   },
-  (table) => [index('account_userId_idx').on(table.userId)]
+  (table) => [index('account_userId_idx').on(table.user_id)]
 )
 
 // ---------------------------------- VERIFICATION -----------------------------------------
@@ -734,9 +742,9 @@ export const verification = pgTable(
     id: text('id').primaryKey(),
     identifier: text('identifier').notNull(),
     value: text('value').notNull(),
-    expiresAt: timestamp('expires_at').notNull(),
-    createdAt: timestamp('created_at').notNull(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    expires_at: timestamp('expires_at').notNull(),
+    created_at: timestamp('created_at').notNull(),
+    updated_at: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
   },
   (table) => [index('verification_identifier_idx').on(table.identifier)]
 )
@@ -753,13 +761,13 @@ export const assetBookings = pgTable(
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
     quantity: integer('quantity').notNull(),
-    blockedFrom: timestamp('blocked_from', { mode: 'date' }).notNull(),
-    blockedUntil: timestamp('blocked_until', { mode: 'date' }).notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
+    blocked_from: timestamp('blocked_from', { mode: 'date' }).notNull(),
+    blocked_until: timestamp('blocked_until', { mode: 'date' }).notNull(),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
   },
   (table) => [
-    index('asset_bookings_dates_idx').on(table.blockedFrom, table.blockedUntil),
+    index('asset_bookings_dates_idx').on(table.blocked_from, table.blocked_until),
   ]
 )
 
@@ -769,37 +777,37 @@ export const assetConditionHistory = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     // Multi-tenancy: Strictly scoped to platform
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    asset: uuid('asset')
+    asset_id: uuid('asset')
       .notNull()
       .references(() => assets.id, { onDelete: 'cascade' }),
-    
+
     condition: assetConditionEnum('condition').notNull(),
     notes: text('notes'),
     photos: text('photos')
       .array()
       .notNull()
       .default(sql`ARRAY[]::text[]`),
-    
-    updatedBy: uuid('updated_by')
+
+    updated_by: uuid('updated_by')
       .notNull()
       .references(() => users.id),
     timestamp: timestamp('timestamp').notNull().defaultNow(),
   },
   (table) => [
-    index('asset_condition_history_asset_idx').on(table.asset),
-    index('asset_condition_history_platform_idx').on(table.platform),
+    index('asset_condition_history_asset_idx').on(table.asset_id),
+    index('asset_condition_history_platform_idx').on(table.platform_id),
   ]
 )
 
 export const assetConditionHistoryRelations = relations(
   assetConditionHistory,
   ({ one }) => ({
-    asset: one(assets, { fields: [assetConditionHistory.asset], references: [assets.id] }),
-    platform: one(platforms, { fields: [assetConditionHistory.platform], references: [platforms.id] }),
-    updatedByUser: one(users, { fields: [assetConditionHistory.updatedBy], references: [users.id] }),
+    asset: one(assets, { fields: [assetConditionHistory.asset_id], references: [assets.id] }),
+    platform: one(platforms, { fields: [assetConditionHistory.platform_id], references: [platforms.id] }),
+    updated_by_user: one(users, { fields: [assetConditionHistory.updated_by], references: [users.id] }),
   })
 )
 
@@ -808,29 +816,29 @@ export const scanEvents = pgTable(
   'scan_events',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    order: uuid('order')
+    order_id: uuid('order')
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
-    asset: uuid('asset')
+    asset_id: uuid('asset')
       .notNull()
       .references(() => assets.id),
-    scanType: scanTypeEnum('scan_type').notNull(),
+    scan_type: scanTypeEnum('scan_type').notNull(),
     quantity: integer('quantity').notNull(),
     condition: assetConditionEnum('condition').notNull(),
     notes: text('notes'),
     photos: text('photos').array().default(sql`ARRAY[]::text[]`),
-    discrepancyReason: discrepancyReasonEnum('discrepancy_reason'),
-    scannedBy: uuid('scanned_by')
+    discrepancy_reason: discrepancyReasonEnum('discrepancy_reason'),
+    scanned_by: uuid('scanned_by')
       .notNull()
       .references(() => users.id),
-    scannedAt: timestamp('scanned_at').notNull().defaultNow(),
+    scanned_at: timestamp('scanned_at').notNull().defaultNow(),
   }
 )
 
 export const scanEventsRelations = relations(scanEvents, ({ one }) => ({
-    order: one(orders, { fields: [scanEvents.order], references: [orders.id] }),
-    asset: one(assets, { fields: [scanEvents.asset], references: [assets.id] }),
-    scannedByUser: one(users, { fields: [scanEvents.scannedBy], references: [users.id] }),
+  order: one(orders, { fields: [scanEvents.order_id], references: [orders.id] }),
+  asset: one(assets, { fields: [scanEvents.asset_id], references: [assets.id] }),
+  scanned_by_user: one(users, { fields: [scanEvents.scanned_by], references: [users.id] }),
 }))
 
 // ---------------------------------- ORDER STATUS HISTORY ---------------------------------
@@ -839,32 +847,32 @@ export const orderStatusHistory = pgTable(
   'order_status_history',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    order: uuid('order')
+    order_id: uuid('order')
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
-    
+
     status: orderStatusEnum('status').notNull(),
     notes: text('notes'),
-    
-    updatedBy: uuid('updated_by')
+
+    updated_by: uuid('updated_by')
       .notNull()
       .references(() => users.id),
     timestamp: timestamp('timestamp').notNull().defaultNow(),
   },
   (table) => [
-    index('order_status_history_order_idx').on(table.order),
+    index('order_status_history_order_idx').on(table.order_id),
   ]
 )
 
 export const orderStatusHistoryRelations = relations(
   orderStatusHistory,
   ({ one }) => ({
-    order: one(orders, { fields: [orderStatusHistory.order], references: [orders.id] }),
-    platform: one(platforms, { fields: [orderStatusHistory.platform], references: [platforms.id] }),
-    updatedByUser: one(users, { fields: [orderStatusHistory.updatedBy], references: [users.id] }),
+    order: one(orders, { fields: [orderStatusHistory.order_id], references: [orders.id] }),
+    platform: one(platforms, { fields: [orderStatusHistory.platform_id], references: [platforms.id] }),
+    updated_by_user: one(users, { fields: [orderStatusHistory.updated_by], references: [users.id] }),
   })
 )
 
@@ -874,28 +882,28 @@ export const notificationLogs = pgTable(
   'notification_logs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform: uuid('platform')
+    platform_id: uuid('platform')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    order: uuid('order')
+    order_id: uuid('order')
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
-    
-    notificationType: varchar('notification_type', { length: 100 }).notNull(),
+
+    notification_type: varchar('notification_type', { length: 100 }).notNull(),
     recipients: text('recipients').notNull(), // JSON string of recipients
-    
+
     status: notificationStatusEnum('status').notNull().default('QUEUED'),
     attempts: integer('attempts').notNull().default(1),
-    
-    lastAttemptAt: timestamp('last_attempt_at').notNull().defaultNow(),
-    sentAt: timestamp('sent_at'),
-    messageId: varchar('message_id', { length: 255 }), // ID from Email Provider (Resend)
-    errorMessage: text('error_message'),
-    
-    createdAt: timestamp('created_at').notNull().defaultNow(),
+
+    last_attempt_at: timestamp('last_attempt_at').notNull().defaultNow(),
+    sent_at: timestamp('sent_at'),
+    message_id: varchar('message_id', { length: 255 }), // ID from Email Provider (Resend)
+    error_message: text('error_message'),
+
+    created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [
-    index('notification_logs_order_idx').on(table.order),
+    index('notification_logs_order_idx').on(table.order_id),
     index('notification_logs_status_idx').on(table.status),
   ]
 )
@@ -903,7 +911,7 @@ export const notificationLogs = pgTable(
 export const notificationLogsRelations = relations(
   notificationLogs,
   ({ one }) => ({
-    order: one(orders, { fields: [notificationLogs.order], references: [orders.id] }),
-    platform: one(platforms, { fields: [notificationLogs.platform], references: [platforms.id] }),
+    order: one(orders, { fields: [notificationLogs.order_id], references: [orders.id] }),
+    platform: one(platforms, { fields: [notificationLogs.platform_id], references: [platforms.id] }),
   })
 )

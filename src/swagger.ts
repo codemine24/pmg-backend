@@ -1,7 +1,17 @@
+import path from "path";
 import swaggerJsdoc from "swagger-jsdoc";
 import config from "./app/config";
+import "./app/modules/asset/assets.swagger";
 import "./app/modules/auth/Auth.swagger";
+import "./app/modules/brand/brand.swagger";
+import "./app/modules/collection/collection.swagger";
+import "./app/modules/company/company.swagger";
+import "./app/modules/platform/platform.swagger";
+import "./app/modules/pricing-tier/pricing-tier.swagger";
 import "./app/modules/user/user.swagger";
+import "./app/modules/warehouse/warehouse.swagger";
+import "./app/modules/zone/zone.swagger";
+
 
 const swaggerDefinition = {
   openapi: "3.0.0",
@@ -46,7 +56,7 @@ const swaggerDefinition = {
         schema: {
           type: "string",
           format: "uuid",
-          example: "5ea04348-cf64-4bf5-9c65-a5823b65aa10",
+          example: "593c027e-0774-4b0b-ae46-ec59c4f11304",
         },
         description: "Platform UUID (required on all requests)",
       },
@@ -116,12 +126,44 @@ const swaggerDefinition = {
       description:
         "Platform configuration and feature flags (Platform Admin only)",
     },
+    {
+      name: "Warehouse Management",
+      description:
+        "Warehouse CRUD operations with multi-tenant support",
+    },
+    {
+      name: "Zone Management",
+      description:
+        "Zone CRUD operations within warehouses for company-specific storage areas",
+    },
+    {
+      name: "Collection Management",
+      description:
+        "Collection CRUD operations for managing asset collections and collection items",
+    },
+    {
+      name: "Pricing Tier Management",
+      description:
+        "Pricing tier CRUD operations for managing location-based and volume-based pricing",
+    },
+    {
+      name: "Asset Management",
+      description:
+        "Asset CRUD operations for inventory management with condition tracking and QR code generation",
+    },
   ],
 };
 
 const options = {
   swaggerDefinition,
-  apis: ["./src/app/**/*.swagger.ts", "./dist/app/**/*.swagger.js"],
+  apis: [
+    path.join(
+      __dirname,
+      process.env.NODE_ENV === "production"
+        ? "app/**/*.swagger.js"
+        : "app/**/*.swagger.ts"
+    ),
+  ],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
