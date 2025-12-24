@@ -75,6 +75,7 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
     ...remainingQuery
   } = query;
 
+  // Step 1: Validate query parameters
   if (sort_by) queryValidator(userQueryValidationConfig, "sort_by", sort_by);
   if (sort_order)
     queryValidator(userQueryValidationConfig, "sort_order", sort_order);
@@ -87,10 +88,10 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
       sort_order,
     });
 
-  // Build WHERE conditions
+  // Step 2: Build WHERE conditions
   const conditions: any[] = [eq(users.platform_id, platformId)];
 
-  // Search term - case insensitive search on name and email
+  // Step 3: Add date range and search filters
   if (search_term) {
     conditions.push(
       or(
@@ -99,8 +100,6 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
       )
     );
   }
-
-  // Date range filtering
   if (from_date) {
     const date = validDateChecker(from_date, "from_date");
     conditions.push(gte(users.created_at, date));
@@ -111,12 +110,11 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
     conditions.push(lte(users.created_at, date));
   }
 
-  // Handle remaining query parameters (role, isActive, etc.)
+  // Step 4: Handle remaining query parameters (role, isActive, etc.)
   if (Object.keys(remainingQuery).length) {
     for (const [key, value] of Object.entries(remainingQuery)) {
       queryValidator(userQueryValidationConfig, key, value);
 
-      // Map query keys to schema fields
       if (key === "role") {
         if (value.includes(",")) {
           conditions.push(inArray(users.role, value.split(",")));
@@ -130,12 +128,14 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
         conditions.push(eq(users.platform_id, value));
       } else if (key === "company" || key === "company_id") {
         conditions.push(eq(users.company_id, value));
+      } else if (key === "permission_template") {
+        conditions.push(eq(users.permission_template, value));
       }
     }
   }
 
-  // Determine sort order
-  let orderByColumn: any = users.created_at; // default
+  // Step 5: Determine sort order
+  let orderByColumn: any = users.created_at;
   if (sortWith === "id") orderByColumn = users.id;
   else if (sortWith === "name") orderByColumn = users.name;
   else if (sortWith === "email") orderByColumn = users.email;
@@ -145,9 +145,8 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
 
   const orderDirection = sortSequence === "asc" ? asc(orderByColumn) : desc(orderByColumn);
 
-  // Execute queries in parallel
+  // Step 6: Execute queries in parallel
   const [result, total] = await Promise.all([
-    // Get paginated users
     db
       .select()
       .from(users)
@@ -156,7 +155,6 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
       .limit(limitNumber)
       .offset(skip),
 
-    // Get count by role
     db
       .select({
         count: count(),
