@@ -9,7 +9,7 @@ import queryValidator from "../../utils/query-validator";
 import { CreateAssetPayload } from "./assets.interfaces";
 import { assetQueryValidationConfig, assetSortableFields } from "./assets.utils";
 
-// ----------------------------------- HELPER: GENERATE UNIQUE QR CODE ----------------
+// ----------------------------------- HELPER: GENERATE UNIQUE QR CODE --------------------
 const generateUniqueQRCode = async (baseQRCode: string, platformId: string): Promise<string> => {
     let qrCode = baseQRCode;
     let counter = 1;
@@ -37,7 +37,7 @@ const generateUniqueQRCode = async (baseQRCode: string, platformId: string): Pro
     }
 };
 
-// ----------------------------------- CREATE ASSET -----------------------------------
+// ----------------------------------- CREATE ASSET ---------------------------------------
 const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
     try {
         // Step 1: Validate company, warehouse and zone exists and is not archived
@@ -219,7 +219,7 @@ const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
     }
 };
 
-// ----------------------------------- GET ASSETS -------------------------------------
+// ----------------------------------- GET ASSETS -----------------------------------------
 const getAssets = async (query: Record<string, any>, user: AuthUser, platformId: string) => {
     const {
         search_term,
@@ -373,7 +373,7 @@ const getAssets = async (query: Record<string, any>, user: AuthUser, platformId:
     };
 };
 
-// ----------------------------------- GET ASSET BY ID --------------------------------
+// ----------------------------------- GET ASSET BY ID ------------------------------------
 const getAssetById = async (id: string, user: AuthUser, platformId: string) => {
     // Step 1: Build WHERE conditions
     const conditions: any[] = [
@@ -474,7 +474,7 @@ const getAssetById = async (id: string, user: AuthUser, platformId: string) => {
     };
 };
 
-// ----------------------------------- UPDATE ASSET -----------------------------------
+// ----------------------------------- UPDATE ASSET ---------------------------------------
 const updateAsset = async (id: string, data: any, user: AuthUser, platformId: string) => {
     try {
         // Step 1: Verify asset exists and user has access
@@ -641,7 +641,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
     }
 };
 
-// ----------------------------------- DELETE ASSET -----------------------------------
+// ----------------------------------- DELETE ASSET ---------------------------------------
 const deleteAsset = async (id: string, user: AuthUser, platformId: string) => {
     // Step 1: Verify asset exists
     const conditions: any[] = [
@@ -867,6 +867,40 @@ const getAssetScanHistory = async (id: string, user: AuthUser, platformId: strin
     };
 };
 
+// ----------------------------------- GET BATCH AVAILABILITY -----------------------------
+const getBatchAvailability = async (assetIds: string[], user: AuthUser, platformId: string) => {
+    // Step 1: Build query conditions
+    const conditions: any[] = [
+        inArray(assets.id, assetIds),
+        eq(assets.platform_id, platformId),
+        isNull(assets.deleted_at),
+    ];
+
+    // CLIENT users can only see their company's assets
+    if (user.role === 'CLIENT') {
+        if (user.company_id) {
+            conditions.push(eq(assets.company_id, user.company_id));
+        } else {
+            throw new CustomizedError(httpStatus.UNAUTHORIZED, "Company not found");
+        }
+    }
+
+    // Step 2: Fetch assets with availability info
+    const foundAssets = await db
+        .select({
+            id: assets.id,
+            name: assets.name,
+            status: assets.status,
+            available_quantity: assets.total_quantity, // Placeholder - real availability needs date-based calculation
+            volume_per_unit: assets.volume_per_unit,
+            weight_per_unit: assets.weight_per_unit,
+        })
+        .from(assets)
+        .where(and(...conditions));
+
+    return foundAssets;
+};
+
 export const AssetServices = {
     createAsset,
     getAssets,
@@ -875,4 +909,5 @@ export const AssetServices = {
     deleteAsset,
     getAssetAvailabilityStats,
     getAssetScanHistory,
+    getBatchAvailability,
 };

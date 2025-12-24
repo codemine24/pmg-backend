@@ -16,6 +16,15 @@ router.post(
   AssetControllers.createAsset
 );
 
+// Batch availability check
+router.post(
+  "/batch-availability",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS', 'CLIENT'),
+  payloadValidator(AssetSchemas.batchAvailabilitySchema),
+  AssetControllers.getBatchAvailability
+);
+
 // Get all assets
 router.get("/", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetControllers.getAssets);
 

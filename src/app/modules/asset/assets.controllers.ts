@@ -119,6 +119,22 @@ const getAssetScanHistory = catchAsync(async (req, res) => {
     });
 });
 
+// ----------------------------------- GET BATCH AVAILABILITY -------------------------
+const getBatchAvailability = catchAsync(async (req, res) => {
+    const platformId = (req as any).platformId;
+    const user = (req as any).user;
+    const { asset_ids } = req.body;
+
+    const result = await AssetServices.getBatchAvailability(asset_ids, user, platformId);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Batch availability fetched successfully",
+        data: result,
+    });
+});
+
 export const AssetControllers = {
     createAsset,
     getAssets,
@@ -127,4 +143,5 @@ export const AssetControllers = {
     deleteAsset,
     getAssetAvailabilityStats,
     getAssetScanHistory,
+    getBatchAvailability,
 };

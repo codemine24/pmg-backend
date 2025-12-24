@@ -237,6 +237,113 @@
  *                   example: "Something went wrong!"
  *     security:
  *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/asset/batch-availability:
+ *   post:
+ *     tags:
+ *       - Asset Management
+ *     summary: Check batch availability
+ *     description: Fetches availability information for multiple assets in a single request. CLIENT users can only check their company's assets.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - asset_ids
+ *             properties:
+ *               asset_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 minItems: 1
+ *                 example: ["a1b2c3d4-e5f6-7890-abcd-ef1234567890"]
+ *     responses:
+ *       200:
+ *         description: Batch availability retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Batch availability fetched successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                         enum: [AVAILABLE, BOOKED, OUT, MAINTENANCE]
+ *                       available_quantity:
+ *                         type: integer
+ *                       volume_per_unit:
+ *                         type: string
+ *                       weight_per_unit:
+ *                         type: string
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "At least one asset ID is required"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/asset:
  *   get:
  *     tags:
  *       - Asset Management
