@@ -1,3 +1,4 @@
+import path from "path";
 import swaggerJsdoc from "swagger-jsdoc";
 import config from "./app/config";
 import "./app/modules/auth/Auth.swagger";
@@ -145,9 +146,14 @@ const swaggerDefinition = {
 
 const options = {
   swaggerDefinition,
-  apis: process.env.NODE_ENV === 'production'
-    ? ["./dist/app/**/*.swagger.js"]
-    : ["./src/app/**/*.swagger.ts"],
+  apis: [
+    path.join(
+      __dirname,
+      process.env.NODE_ENV === "production"
+        ? "app/**/*.swagger.js"
+        : "app/**/*.swagger.ts"
+    ),
+  ],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
