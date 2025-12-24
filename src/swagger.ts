@@ -1,7 +1,11 @@
+import path from "path";
 import swaggerJsdoc from "swagger-jsdoc";
 import config from "./app/config";
 import "./app/modules/auth/Auth.swagger";
+import "./app/modules/brand/brand.swagger";
 import "./app/modules/collection/collection.swagger";
+import "./app/modules/company/company.swagger";
+import "./app/modules/platform/platform.swagger";
 import "./app/modules/pricing-tier/pricing-tier.swagger";
 import "./app/modules/user/user.swagger";
 import "./app/modules/warehouse/warehouse.swagger";
@@ -145,7 +149,14 @@ const swaggerDefinition = {
 
 const options = {
   swaggerDefinition,
-  apis: ["./src/app/**/*.swagger.ts", "./dist/app/**/*.swagger.js"],
+  apis: [
+    path.join(
+      __dirname,
+      process.env.NODE_ENV === "production"
+        ? "app/**/*.swagger.js"
+        : "app/**/*.swagger.ts"
+    ),
+  ],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
