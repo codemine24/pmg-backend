@@ -16,7 +16,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookiePerser());
 app.use(
   cors({
-    origin: ["*"],
+    origin: (origin, callback) => {
+      callback(null, origin);
+    },
     credentials: true,
   })
 );
