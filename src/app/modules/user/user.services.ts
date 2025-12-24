@@ -1,8 +1,10 @@
 import bcrypt from "bcrypt";
-import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lte, or } from "drizzle-orm";
+import httpStatus from "http-status";
 import { db } from "../../../db";
-import { users } from "../../../db/schema";
+import { companies, users } from "../../../db/schema";
 import config from "../../config";
+import CustomizedError from "../../error/customized-error";
 import { validDateChecker } from "../../utils/checker";
 import paginationMaker from "../../utils/pagination-maker";
 import queryValidator from "../../utils/query-validator";
@@ -11,17 +13,53 @@ import { userQueryValidationConfig } from "./user.utils";
 
 // ----------------------------------- CREATE USER ------------------------------------
 const createUser = async (data: CreateUserPayload) => {
-  // Hash the password
-  const hashedPassword = await bcrypt.hash(data.password, config.salt_rounds);
+  try {
+    // Step 1: If company_id is provided, validate it exists and is not deleted
+    if (data.company_id) {
+      const [company] = await db
+        .select()
+        .from(companies)
+        .where(
+          and(
+            eq(companies.id, data.company_id),
+            eq(companies.platform_id, data.platform_id),
+            isNull(companies.deleted_at)
+          )
+        );
 
-  // Prepare user data with hashed password
-  const userData = {
-    ...data,
-    password: hashedPassword,
-  };
+      if (!company) {
+        throw new CustomizedError(
+          httpStatus.NOT_FOUND,
+          "Company not found or is archived"
+        );
+      }
+    }
 
-  const result = await db.insert(users).values(userData).returning();
-  return result[0];
+    // Step 2: Hash the password
+    const hashedPassword = await bcrypt.hash(data.password, config.salt_rounds);
+
+    // Step 3: Prepare user data with hashed password
+    const userData = {
+      ...data,
+      password: hashedPassword,
+    };
+
+    // Step 4: Insert user into database
+    const [result] = await db.insert(users).values(userData).returning();
+    return result;
+  } catch (error: any) {
+    const pgError = error.cause || error;
+
+    if (pgError.code === "23505") {
+      if (pgError.constraint === "user_platform_email_unique") {
+        throw new CustomizedError(
+          httpStatus.CONFLICT,
+          "User with this email already exists"
+        );
+      }
+    }
+    throw error;
+  }
 };
 
 // ----------------------------------- GET USERS ------------------------------------
@@ -77,7 +115,7 @@ const getUsers = async (platformId: string, query: Record<string, any>) => {
   if (Object.keys(remainingQuery).length) {
     for (const [key, value] of Object.entries(remainingQuery)) {
       queryValidator(userQueryValidationConfig, key, value);
-      
+
       // Map query keys to schema fields
       if (key === "role") {
         if (value.includes(",")) {

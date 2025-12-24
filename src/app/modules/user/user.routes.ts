@@ -7,6 +7,7 @@ import { UserSchemas } from "./user.schemas";
 
 const router = Router();
 
+// Create user (admin)
 router.post(
   "/",
   platformValidator,
@@ -14,10 +15,11 @@ router.post(
   UserControllers.createUser
 );
 
+// Get all users (admin & logistics)
 router.get(
   "/",
   platformValidator,
-  auth('ADMIN'),
+  auth('ADMIN', 'LOGISTICS'),
   UserControllers.getUsers
 );
 
