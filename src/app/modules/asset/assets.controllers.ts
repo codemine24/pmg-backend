@@ -178,10 +178,10 @@ const bulkUploadAssets = catchAsync(async (req, res) => {
     const result = await AssetServices.bulkUploadAssets(file, user, platformId);
 
     sendResponse(res, {
-        statusCode: httpStatus.CREATED,
-        success: true,
-        message: "Assets uploaded successfully",
-        data: result,
+        statusCode: result.statusCode,
+        success: result.success,
+        message: result.message,
+        data: result.data,
     });
 });
 
