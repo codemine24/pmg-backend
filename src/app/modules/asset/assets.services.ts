@@ -585,7 +585,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
             const newHistoryEntry = {
                 condition: data.condition,
                 notes: data.condition_notes || null,
-                updated_by: user.id,
+                updated_by: user.email,
                 timestamp: new Date().toISOString(),
             };
 
