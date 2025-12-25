@@ -6,6 +6,7 @@ import { assetBookings, assets, brands, companies, orders, scanEvents, warehouse
 import CustomizedError from "../../error/customized-error";
 import { AuthUser } from "../../interface/common";
 import paginationMaker from "../../utils/pagination-maker";
+import { qrCodeGenerator } from "../../utils/qr-code-generator";
 import queryValidator from "../../utils/query-validator";
 import {
     BulkUploadResponse,
@@ -83,13 +84,13 @@ const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
             }
         }
 
-        // Step 3: Handle BATCH tracking with quantity > 1 - Create N separate assets
-        if (data.tracking_method === 'BATCH' && data.total_quantity > 1) {
+        // Step 3: Handle INDIVIDUAL tracking with quantity > 1 - Create N separate assets
+        if (data.tracking_method === 'INDIVIDUAL' && data.total_quantity > 1) {
             const createdAssets: any[] = [];
 
             for (let i = 0; i < data.total_quantity; i++) {
                 // Generate unique QR code for each unit
-                const qrCode = await generateUniqueQRCode(data.qr_code, data.platform_id);
+                const qrCode = await qrCodeGenerator(data.company_id);
 
                 // Create initial condition history entry
                 const initialConditionHistory = [];
@@ -146,7 +147,7 @@ const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
         }
 
         // Step 4: INDIVIDUAL tracking with quantity=1 OR BATCH tracking - Create single asset
-        const qrCode = await generateUniqueQRCode(data.qr_code, data.platform_id);
+        const qrCode = await qrCodeGenerator(data.company_id);
 
         // Create initial condition history entry
         const initialConditionHistory = [];
@@ -187,7 +188,7 @@ const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
             if (pgError.constraint === 'assets_qr_code_key') {
                 throw new CustomizedError(
                     httpStatus.CONFLICT,
-                    `Asset with QR code "${data.qr_code}" already exists`
+                    `Duplicate QR code found`
                 );
             }
             throw new CustomizedError(
@@ -609,7 +610,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
             if (pgError.constraint === 'assets_qr_code_key') {
                 throw new CustomizedError(
                     httpStatus.CONFLICT,
-                    `Asset with QR code "${data.qr_code}" already exists`
+                    `Duplicate QR code found`
                 );
             }
             throw new CustomizedError(
@@ -1094,34 +1095,6 @@ const getAssetAvailabilitySummary = async (
     };
 };
 
-// ----------------------------------- HELPER: GENERATE UNIQUE QR CODE --------------------
-const generateUniqueQRCode = async (baseQRCode: string, platformId: string): Promise<string> => {
-    let qrCode = baseQRCode;
-    let counter = 1;
-
-    // Check if QR code exists
-    while (true) {
-        const [existing] = await db
-            .select()
-            .from(assets)
-            .where(
-                and(
-                    eq(assets.qr_code, qrCode),
-                    eq(assets.platform_id, platformId)
-                )
-            )
-            .limit(1);
-
-        if (!existing) {
-            return qrCode;
-        }
-
-        // Generate new QR code with suffix
-        qrCode = `${baseQRCode}-${counter}`;
-        counter++;
-    }
-};
-
 // ----------------------------------- BULK UPLOAD ASSETS -------------------------------------
 const bulkUploadAssets = async (file: Express.Multer.File, user: AuthUser, platformId: string): Promise<BulkUploadResponse> => {
     try {
@@ -1530,8 +1503,7 @@ const createBulkAssets = async (validatedRows: ValidatedAssetData[], user: AuthU
             const insertData = await Promise.all(
                 batch.map(async (row) => {
                     // Generate unique QR code
-                    const baseQRCode = `${row.name.replace(/\s+/g, '-').toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-                    const qrCode = await generateUniqueQRCode(baseQRCode, row.platform_id);
+                    const qrCode = await qrCodeGenerator(row.company_id);
 
                     return {
                         platform_id: row.platform_id,

@@ -21,7 +21,6 @@
  *               - name
  *               - category
  *               - tracking_method
- *               - qr_code
  *               - weight_per_unit
  *               - volume_per_unit
  *             properties:
@@ -75,11 +74,6 @@
  *                 minimum: 0
  *                 default: 1
  *                 example: 3
- *               qr_code:
- *                 type: string
- *                 minLength: 1
- *                 maxLength: 100
- *                 example: "ASSET-CONF-TABLE-001"
  *               packaging:
  *                 type: string
  *                 maxLength: 100
