@@ -1127,9 +1127,9 @@ const bulkUploadAssets = async (file: Express.Multer.File, user: AuthUser, platf
     };
 };
 
-// ----------------------------------- ADD MAINTENANCE NOTES ----------------------------------
+// ----------------------------------- ADD CONDITION HISTORY ----------------------------------
 const addConditionHistory = async (data: AddConditionHistoryPayload, user: AuthUser, platformId: string) => {
-    // Step 1: Fetch asset to get current condition
+    // Step 1: Fetch asset (verify exists, platform scope, not deleted)
     const asset = await db.query.assets.findFirst({
         where: and(
             eq(assets.id, data.asset_id),
@@ -1142,10 +1142,12 @@ const addConditionHistory = async (data: AddConditionHistoryPayload, user: AuthU
         throw new CustomizedError(httpStatus.NOT_FOUND, 'Asset not found');
     }
 
+    // Step 2: Get existing history or initialize empty array
     const existingHistory = Array.isArray(asset.condition_history)
         ? asset.condition_history
         : [];
 
+    // Step 3: Create new history entry
     const newHistory = {
         condition: data.condition || asset.condition,
         notes: data.notes,
@@ -1154,8 +1156,10 @@ const addConditionHistory = async (data: AddConditionHistoryPayload, user: AuthU
         timestamp: new Date().toISOString(),
     }
 
+    // Step 4: Prepend new entry (newest first)
     const condition_history = [newHistory, ...existingHistory];
 
+    // Step 5: Update asset with new history
     const [result] = await db
         .update(assets)
         .set({
