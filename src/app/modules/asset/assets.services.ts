@@ -1,7 +1,7 @@
-import { and, asc, count, desc, eq, ilike, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, sql } from "drizzle-orm";
 import httpStatus from "http-status";
 import { db } from "../../../db";
-import { assets, brands, companies, warehouses, zones } from "../../../db/schema";
+import { assetBookings, assets, brands, companies, orders, scanEvents, warehouses, zones } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
 import { AuthUser } from "../../interface/common";
 import paginationMaker from "../../utils/pagination-maker";
@@ -9,35 +9,7 @@ import queryValidator from "../../utils/query-validator";
 import { CreateAssetPayload } from "./assets.interfaces";
 import { assetQueryValidationConfig, assetSortableFields } from "./assets.utils";
 
-// ----------------------------------- HELPER: GENERATE UNIQUE QR CODE ----------------
-const generateUniqueQRCode = async (baseQRCode: string, platformId: string): Promise<string> => {
-    let qrCode = baseQRCode;
-    let counter = 1;
-
-    // Check if QR code exists
-    while (true) {
-        const [existing] = await db
-            .select()
-            .from(assets)
-            .where(
-                and(
-                    eq(assets.qr_code, qrCode),
-                    eq(assets.platform_id, platformId)
-                )
-            )
-            .limit(1);
-
-        if (!existing) {
-            return qrCode;
-        }
-
-        // Generate new QR code with suffix
-        qrCode = `${baseQRCode}-${counter}`;
-        counter++;
-    }
-};
-
-// ----------------------------------- CREATE ASSET -----------------------------------
+// ----------------------------------- CREATE ASSET ---------------------------------------
 const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
     try {
         // Step 1: Validate company, warehouse and zone exists and is not archived
@@ -219,7 +191,7 @@ const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
     }
 };
 
-// ----------------------------------- GET ASSETS -------------------------------------
+// ----------------------------------- GET ASSETS -----------------------------------------
 const getAssets = async (query: Record<string, any>, user: AuthUser, platformId: string) => {
     const {
         search_term,
@@ -373,7 +345,7 @@ const getAssets = async (query: Record<string, any>, user: AuthUser, platformId:
     };
 };
 
-// ----------------------------------- GET ASSET BY ID --------------------------------
+// ----------------------------------- GET ASSET BY ID ------------------------------------
 const getAssetById = async (id: string, user: AuthUser, platformId: string) => {
     // Step 1: Build WHERE conditions
     const conditions: any[] = [
@@ -474,7 +446,7 @@ const getAssetById = async (id: string, user: AuthUser, platformId: string) => {
     };
 };
 
-// ----------------------------------- UPDATE ASSET -----------------------------------
+// ----------------------------------- UPDATE ASSET ---------------------------------------
 const updateAsset = async (id: string, data: any, user: AuthUser, platformId: string) => {
     try {
         // Step 1: Verify asset exists and user has access
@@ -641,7 +613,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
     }
 };
 
-// ----------------------------------- DELETE ASSET -----------------------------------
+// ----------------------------------- DELETE ASSET ---------------------------------------
 const deleteAsset = async (id: string, user: AuthUser, platformId: string) => {
     // Step 1: Verify asset exists
     const conditions: any[] = [
@@ -693,10 +665,462 @@ const deleteAsset = async (id: string, user: AuthUser, platformId: string) => {
     return null;
 };
 
+// ----------------------------------- GET ASSET AVAILABILITY STATS -----------------------
+const getAssetAvailabilityStats = async (id: string, user: AuthUser, platformId: string) => {
+    // Step 1: Get asset with access control
+    const conditions: any[] = [
+        eq(assets.id, id),
+        eq(assets.platform_id, platformId),
+        isNull(assets.deleted_at),
+    ];
+
+    // CLIENT users can only see their company's assets
+    if (user.role === 'CLIENT') {
+        if (user.company_id) {
+            conditions.push(eq(assets.company_id, user.company_id));
+        } else {
+            throw new CustomizedError(httpStatus.UNAUTHORIZED, "Company not found");
+        }
+    }
+
+    const asset = await db.query.assets.findFirst({
+        where: and(...conditions),
+    });
+
+    if (!asset) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, "Asset not found");
+    }
+
+    const totalQuantity = asset.total_quantity;
+
+    // Step 2: Calculate BOOKED quantity from active bookings
+    const activeBookings = await db
+        .select({
+            quantity: assetBookings.quantity,
+        })
+        .from(assetBookings)
+        .innerJoin(orders, eq(assetBookings.order, orders.id))
+        .where(
+            and(
+                eq(assetBookings.asset, id),
+                inArray(orders.order_status, [
+                    'CONFIRMED',
+                    'IN_PREPARATION',
+                    'READY_FOR_DELIVERY',
+                    'IN_TRANSIT',
+                    'DELIVERED',
+                    'IN_USE',
+                    'AWAITING_RETURN',
+                ])
+            )
+        );
+
+    const bookedQuantity = activeBookings.reduce(
+        (sum, booking) => sum + booking.quantity,
+        0
+    );
+
+    // Step 3: Calculate OUT quantity from scan events
+    const outboundScans = await db
+        .select({
+            quantity: scanEvents.quantity,
+        })
+        .from(scanEvents)
+        .where(
+            and(
+                eq(scanEvents.asset_id, id),
+                eq(scanEvents.scan_type, 'OUTBOUND')
+            )
+        );
+
+    const inboundScans = await db
+        .select({
+            quantity: scanEvents.quantity,
+        })
+        .from(scanEvents)
+        .where(
+            and(
+                eq(scanEvents.asset_id, id),
+                eq(scanEvents.scan_type, 'INBOUND')
+            )
+        );
+
+    const totalOutbound = outboundScans.reduce((sum, scan) => sum + scan.quantity, 0);
+    const totalInbound = inboundScans.reduce((sum, scan) => sum + scan.quantity, 0);
+    const outQuantity = Math.max(0, totalOutbound - totalInbound);
+
+    // Step 4: Calculate IN_MAINTENANCE quantity
+    let inMaintenanceQuantity = 0;
+    if (asset.condition === 'RED') {
+        inMaintenanceQuantity = totalQuantity;
+    }
+
+    // Step 5: Calculate AVAILABLE quantity
+    const availableQuantity = Math.max(
+        0,
+        totalQuantity - bookedQuantity - outQuantity - inMaintenanceQuantity
+    );
+
+    return {
+        asset_id: id,
+        total_quantity: totalQuantity,
+        available_quantity: availableQuantity,
+        booked_quantity: bookedQuantity,
+        out_quantity: outQuantity,
+        in_maintenance_quantity: inMaintenanceQuantity,
+        breakdown: {
+            active_bookings_count: activeBookings.length,
+            outbound_scans_total: totalOutbound,
+            inbound_scans_total: totalInbound,
+        },
+    };
+};
+
+// ----------------------------------- GET ASSET SCAN HISTORY -----------------------------
+const getAssetScanHistory = async (id: string, user: AuthUser, platformId: string) => {
+    // Step 1: Verify asset exists and user has access
+    const conditions: any[] = [
+        eq(assets.id, id),
+        eq(assets.platform_id, platformId),
+        isNull(assets.deleted_at),
+    ];
+
+    // CLIENT users can only see their company's assets
+    if (user.role === 'CLIENT') {
+        if (user.company_id) {
+            conditions.push(eq(assets.company_id, user.company_id));
+        } else {
+            throw new CustomizedError(httpStatus.UNAUTHORIZED, "Company not found");
+        }
+    }
+
+    const asset = await db.query.assets.findFirst({
+        where: and(...conditions),
+    });
+
+    if (!asset) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, "Asset not found");
+    }
+
+    // Step 2: Get scan history for the asset
+    const events = await db.query.scanEvents.findMany({
+        where: eq(scanEvents.asset_id, id),
+        with: {
+            asset: {
+                columns: {
+                    id: true,
+                    name: true,
+                    qr_code: true,
+                    tracking_method: true,
+                }
+            },
+            scanned_by_user: {
+                columns: {
+                    id: true,
+                    name: true,
+                }
+            },
+            order: {
+                columns: {
+                    id: true,
+                    order_id: true,
+                }
+            },
+        },
+        orderBy: (scanEvents, { desc }) => [desc(scanEvents.scanned_at)],
+    });
+
+    // Step 3: Return scan history
+    return {
+        asset_id: id,
+        asset_name: asset.name,
+        qr_code: asset.qr_code,
+        scan_history: events,
+    };
+};
+
+// ----------------------------------- GET BATCH AVAILABILITY -----------------------------
+const getBatchAvailability = async (assetIds: string[], user: AuthUser, platformId: string) => {
+    // Step 1: Build query conditions
+    const conditions: any[] = [
+        inArray(assets.id, assetIds),
+        eq(assets.platform_id, platformId),
+        isNull(assets.deleted_at),
+    ];
+
+    // CLIENT users can only see their company's assets
+    if (user.role === 'CLIENT') {
+        if (user.company_id) {
+            conditions.push(eq(assets.company_id, user.company_id));
+        } else {
+            throw new CustomizedError(httpStatus.UNAUTHORIZED, "Company not found");
+        }
+    }
+
+    // Step 2: Fetch assets with availability info
+    const foundAssets = await db
+        .select({
+            id: assets.id,
+            name: assets.name,
+            status: assets.status,
+            available_quantity: assets.total_quantity, // Placeholder - real availability needs date-based calculation
+            volume_per_unit: assets.volume_per_unit,
+            weight_per_unit: assets.weight_per_unit,
+        })
+        .from(assets)
+        .where(and(...conditions));
+
+    return foundAssets;
+};
+
+// ----------------------------------- CHECK ASSET AVAILABILITY ---------------------------
+const checkAssetAvailability = async (data: any, user: AuthUser, platformId: string) => {
+    const { start_date, end_date, asset_id, asset_ids, items } = data;
+
+    // Parse and validate dates
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, "Invalid date format");
+    }
+
+    if (endDate < startDate) {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, "End date must be after start date");
+    }
+
+    // Single asset check
+    if (asset_id) {
+        return await getSingleAssetAvailability(asset_id, startDate, endDate, user, platformId);
+    }
+
+    // Multiple assets check (cart validation)
+    if (items && Array.isArray(items)) {
+        return await checkMultipleAssetsAvailability(items, startDate, endDate, user, platformId);
+    }
+
+    // Batch asset summary check
+    if (asset_ids && Array.isArray(asset_ids)) {
+        const summaries = await Promise.all(
+            asset_ids.map(async (id: string) => {
+                const summary = await getAssetAvailabilitySummary(id, startDate, endDate, user, platformId);
+                return {
+                    asset_id: id,
+                    ...summary,
+                };
+            })
+        );
+        return { assets: summaries };
+    }
+
+    throw new CustomizedError(httpStatus.BAD_REQUEST, "Either asset_id, asset_ids, or items array is required");
+};
+
+// ----------------------------------- HELPER: GET SINGLE ASSET AVAILABILITY --------------
+const getSingleAssetAvailability = async (
+    assetId: string,
+    startDate: Date,
+    endDate: Date,
+    user: AuthUser,
+    platformId: string
+) => {
+    // Verify asset exists and user has access
+    const conditions: any[] = [
+        eq(assets.id, assetId),
+        eq(assets.platform_id, platformId),
+        isNull(assets.deleted_at),
+    ];
+
+    // Filter by user role (CLIENT users can only see their company's assets)
+    if (user.role === 'CLIENT') {
+        if (user.company_id) {
+            conditions.push(eq(assets.company_id, user.company_id));
+        } else {
+            throw new CustomizedError(httpStatus.UNAUTHORIZED, "Company not found");
+        }
+    }
+
+    const asset = await db.query.assets.findFirst({
+        where: and(...conditions),
+    });
+
+    if (!asset) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, "Asset not found");
+    }
+
+    // Get overlapping bookings
+    const overlappingBookings = await db.query.assetBookings.findMany({
+        where: and(
+            eq(assetBookings.asset, assetId),
+            sql`${assetBookings.blocked_from} <= ${endDate}`,
+            sql`${assetBookings.blocked_until} >= ${startDate}`
+        ),
+        with: {
+            order: {
+                columns: {
+                    id: true,
+                    order_id: true,
+                },
+            },
+        },
+    });
+
+    const bookedQuantity = overlappingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+    const availableQuantity = Math.max(0, asset.total_quantity - bookedQuantity);
+
+    return {
+        total_quantity: asset.total_quantity,
+        available_quantity: availableQuantity,
+        booked_quantity: bookedQuantity,
+        bookings: overlappingBookings.map(b => ({
+            order_id: (b.order as any).order_id,
+            quantity: b.quantity,
+            blocked_from: b.blocked_from,
+            blocked_until: b.blocked_until,
+        })),
+    };
+};
+
+// ----------------------------------- HELPER: CHECK MULTIPLE ASSET AVAILABILITY ----------
+const checkMultipleAssetsAvailability = async (
+    items: Array<{ asset_id: string; quantity: number }>,
+    startDate: Date,
+    endDate: Date,
+    user: AuthUser,
+    platformId: string
+) => {
+    const unavailableItems: Array<{
+        asset_id: string;
+        asset_name: string;
+        requested: number;
+        available: number;
+        next_available_date?: Date;
+    }> = [];
+
+    for (const item of items) {
+        const availability = await getSingleAssetAvailability(
+            item.asset_id,
+            startDate,
+            endDate,
+            user,
+            platformId
+        );
+
+        if (availability.available_quantity < item.quantity) {
+            // Get asset name
+            const asset = await db.query.assets.findFirst({
+                where: eq(assets.id, item.asset_id),
+                columns: { name: true },
+            });
+
+            // Find next available date
+            let nextAvailableDate: Date | undefined;
+            if (availability.bookings.length > 0) {
+                const latestBookingEnd = new Date(
+                    Math.max(...availability.bookings.map(b => new Date(b.blocked_until).getTime()))
+                );
+                nextAvailableDate = new Date(latestBookingEnd);
+                nextAvailableDate.setDate(nextAvailableDate.getDate() + 1);
+            }
+
+            unavailableItems.push({
+                asset_id: item.asset_id,
+                asset_name: asset?.name || "Unknown",
+                requested: item.quantity,
+                available: availability.available_quantity,
+                next_available_date: nextAvailableDate,
+            });
+        }
+    }
+
+    return {
+        all_available: unavailableItems.length === 0,
+        unavailable_items: unavailableItems,
+    };
+};
+
+// ----------------------------------- HELPER: GET ASSET AVAILABILITY SUMMARY -------------
+const getAssetAvailabilitySummary = async (
+    assetId: string,
+    startDate: Date,
+    endDate: Date,
+    user: AuthUser,
+    platformId: string
+) => {
+    const availability = await getSingleAssetAvailability(assetId, startDate, endDate, user, platformId);
+
+    let message = "";
+    let nextAvailableDate: Date | undefined;
+
+    if (availability.available_quantity === 0) {
+        // Fully booked - find when it becomes available
+        const futureBookings = await db.query.assetBookings.findMany({
+            where: and(
+                eq(assetBookings.asset, assetId),
+                gte(assetBookings.blocked_from, startDate)
+            ),
+            orderBy: (bookings, { asc }) => [asc(bookings.blocked_until)],
+            limit: 1,
+        });
+
+        if (futureBookings.length > 0) {
+            nextAvailableDate = new Date(futureBookings[0].blocked_until);
+            nextAvailableDate.setDate(nextAvailableDate.getDate() + 1);
+            message = `Fully booked. Available from ${nextAvailableDate.toISOString().split('T')[0]}`;
+        } else {
+            message = "Currently unavailable";
+        }
+    } else if (availability.available_quantity < availability.total_quantity) {
+        message = `${availability.available_quantity} of ${availability.total_quantity} available`;
+    } else {
+        message = `All ${availability.total_quantity} units available`;
+    }
+
+    return {
+        is_available: availability.available_quantity > 0,
+        available_quantity: availability.available_quantity,
+        total_quantity: availability.total_quantity,
+        next_available_date: nextAvailableDate,
+        message,
+    };
+};
+
+// ----------------------------------- HELPER: GENERATE UNIQUE QR CODE --------------------
+const generateUniqueQRCode = async (baseQRCode: string, platformId: string): Promise<string> => {
+    let qrCode = baseQRCode;
+    let counter = 1;
+
+    // Check if QR code exists
+    while (true) {
+        const [existing] = await db
+            .select()
+            .from(assets)
+            .where(
+                and(
+                    eq(assets.qr_code, qrCode),
+                    eq(assets.platform_id, platformId)
+                )
+            )
+            .limit(1);
+
+        if (!existing) {
+            return qrCode;
+        }
+
+        // Generate new QR code with suffix
+        qrCode = `${baseQRCode}-${counter}`;
+        counter++;
+    }
+};
+
 export const AssetServices = {
     createAsset,
     getAssets,
     getAssetById,
     updateAsset,
     deleteAsset,
+    getAssetAvailabilityStats,
+    getAssetScanHistory,
+    getBatchAvailability,
+    checkAssetAvailability,
 };

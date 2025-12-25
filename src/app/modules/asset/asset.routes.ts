@@ -16,11 +16,35 @@ router.post(
   AssetControllers.createAsset
 );
 
+// Batch availability check
+router.post(
+  "/batch-availability",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS', 'CLIENT'),
+  payloadValidator(AssetSchemas.batchAvailabilitySchema),
+  AssetControllers.getBatchAvailability
+);
+
+// Check availability with date range
+router.post(
+  "/check-availability",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS', 'CLIENT'),
+  payloadValidator(AssetSchemas.checkAvailabilitySchema),
+  AssetControllers.checkAssetAvailability
+);
+
 // Get all assets
 router.get("/", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetControllers.getAssets);
 
 // Get asset by id
 router.get("/:id", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetControllers.getAssetById);
+
+// Get asset availability stats
+router.get("/:id/availability-stats", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetControllers.getAssetAvailabilityStats);
+
+// Get asset scan history
+router.get("/:id/scan-history", platformValidator, auth('ADMIN', 'LOGISTICS'), AssetControllers.getAssetScanHistory);
 
 // Update asset
 router.patch("/:id", platformValidator, auth('ADMIN', 'LOGISTICS'), payloadValidator(AssetSchemas.updateAssetSchema), AssetControllers.updateAsset);

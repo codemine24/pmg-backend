@@ -237,6 +237,337 @@
  *                   example: "Something went wrong!"
  *     security:
  *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/asset/batch-availability:
+ *   post:
+ *     tags:
+ *       - Asset Management
+ *     summary: Check batch availability
+ *     description: Fetches availability information for multiple assets in a single request. CLIENT users can only check their company's assets.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - asset_ids
+ *             properties:
+ *               asset_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 minItems: 1
+ *                 example: ["a1b2c3d4-e5f6-7890-abcd-ef1234567890"]
+ *     responses:
+ *       200:
+ *         description: Batch availability retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Batch availability fetched successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                         enum: [AVAILABLE, BOOKED, OUT, MAINTENANCE]
+ *                       available_quantity:
+ *                         type: integer
+ *                       volume_per_unit:
+ *                         type: string
+ *                       weight_per_unit:
+ *                         type: string
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "At least one asset ID is required"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/asset/check-availability:
+ *   post:
+ *     tags:
+ *       - Asset Management
+ *     summary: Check asset availability with date range
+ *     description: |
+ *       Comprehensive availability checking with three modes of operation:
+ *       1. **Single Asset Check** - Get detailed availability for one asset
+ *       2. **Cart Validation** - Check if multiple assets with quantities are available
+ *       3. **Batch Summary** - Get availability summaries for multiple assets
+ *       
+ *       CLIENT users can only check their company's assets.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - start_date
+ *               - end_date
+ *             properties:
+ *               start_date:
+ *                 type: string
+ *                 format: date
+ *                 example: "2024-12-25"
+ *               end_date:
+ *                 type: string
+ *                 format: date
+ *                 example: "2024-12-30"
+ *               asset_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: For single asset check
+ *               asset_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: For batch summary check
+ *               items:
+ *                 type: array
+ *                 description: For cart validation
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - asset_id
+ *                     - quantity
+ *                   properties:
+ *                     asset_id:
+ *                       type: string
+ *                       format: uuid
+ *                     quantity:
+ *                       type: integer
+ *                       minimum: 1
+ *           examples:
+ *             singleAsset:
+ *               summary: Single asset check
+ *               value:
+ *                 start_date: "2024-12-25"
+ *                 end_date: "2024-12-30"
+ *                 asset_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *             cartValidation:
+ *               summary: Cart validation
+ *               value:
+ *                 start_date: "2024-12-25"
+ *                 end_date: "2024-12-30"
+ *                 items:
+ *                   - asset_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *                     quantity: 2
+ *                   - asset_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+ *                     quantity: 1
+ *             batchSummary:
+ *               summary: Batch summary
+ *               value:
+ *                 start_date: "2024-12-25"
+ *                 end_date: "2024-12-30"
+ *                 asset_ids:
+ *                   - "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *                   - "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+ *     responses:
+ *       200:
+ *         description: Availability checked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Availability checked successfully"
+ *                 data:
+ *                   oneOf:
+ *                     - type: object
+ *                       description: Single asset response
+ *                       properties:
+ *                         total_quantity:
+ *                           type: integer
+ *                         available_quantity:
+ *                           type: integer
+ *                         booked_quantity:
+ *                           type: integer
+ *                         bookings:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               order_id:
+ *                                 type: string
+ *                               quantity:
+ *                                 type: integer
+ *                               blocked_from:
+ *                                 type: string
+ *                                 format: date
+ *                               blocked_until:
+ *                                 type: string
+ *                                 format: date
+ *                     - type: object
+ *                       description: Cart validation response
+ *                       properties:
+ *                         all_available:
+ *                           type: boolean
+ *                         unavailable_items:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               asset_id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               asset_name:
+ *                                 type: string
+ *                               requested:
+ *                                 type: integer
+ *                               available:
+ *                                 type: integer
+ *                               next_available_date:
+ *                                 type: string
+ *                                 format: date
+ *                     - type: object
+ *                       description: Batch summary response
+ *                       properties:
+ *                         assets:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               asset_id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               is_available:
+ *                                 type: boolean
+ *                               available_quantity:
+ *                                 type: integer
+ *                               total_quantity:
+ *                                 type: integer
+ *                               next_available_date:
+ *                                 type: string
+ *                                 format: date
+ *                               message:
+ *                                 type: string
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid date format"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       404:
+ *         description: Not Found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Asset not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/asset:
  *   get:
  *     tags:
  *       - Asset Management
@@ -463,6 +794,284 @@
  *                   example: "Something went wrong!"
  *     security:
  *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/asset/{id}/availability-stats:
+ *   get:
+ *     tags:
+ *       - Asset Management
+ *     summary: Get asset availability statistics
+ *     description: Calculates real-time availability statistics for an asset including available, booked, out, and in-maintenance quantities. CLIENT users can only view their company's assets.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Availability statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Asset availability stats fetched successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     asset_id:
+ *                       type: string
+ *                       format: uuid
+ *                     total_quantity:
+ *                       type: integer
+ *                       example: 10
+ *                     available_quantity:
+ *                       type: integer
+ *                       example: 5
+ *                     booked_quantity:
+ *                       type: integer
+ *                       example: 3
+ *                     out_quantity:
+ *                       type: integer
+ *                       example: 1
+ *                     in_maintenance_quantity:
+ *                       type: integer
+ *                       example: 1
+ *                     breakdown:
+ *                       type: object
+ *                       properties:
+ *                         active_bookings_count:
+ *                           type: integer
+ *                           example: 2
+ *                         outbound_scans_total:
+ *                           type: integer
+ *                           example: 5
+ *                         inbound_scans_total:
+ *                           type: integer
+ *                           example: 4
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       404:
+ *         description: Not Found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Asset not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/asset/{id}/scan-history:
+ *   get:
+ *     tags:
+ *       - Asset Management
+ *     summary: Get asset scan history
+ *     description: Retrieves complete scan history for a specific asset including scan events with asset, user, and order details. Only ADMIN and LOGISTICS users can access scan history.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Scan history retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Asset scan history fetched successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     asset_id:
+ *                       type: string
+ *                       format: uuid
+ *                     asset_name:
+ *                       type: string
+ *                       example: "Conference Table #1"
+ *                     qr_code:
+ *                       type: string
+ *                       example: "ASSET-CONF-TABLE-001"
+ *                     scan_history:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           order_id:
+ *                             type: string
+ *                             format: uuid
+ *                           asset_id:
+ *                             type: string
+ *                             format: uuid
+ *                           scan_type:
+ *                             type: string
+ *                             enum: [OUTBOUND, INBOUND]
+ *                           quantity:
+ *                             type: integer
+ *                             example: 1
+ *                           condition:
+ *                             type: string
+ *                             enum: [GREEN, ORANGE, RED]
+ *                           notes:
+ *                             type: string
+ *                             nullable: true
+ *                           photos:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           discrepancy_reason:
+ *                             type: string
+ *                             nullable: true
+ *                           scanned_by:
+ *                             type: string
+ *                             format: uuid
+ *                           scanned_at:
+ *                             type: string
+ *                             format: date-time
+ *                           asset:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               name:
+ *                                 type: string
+ *                               qr_code:
+ *                                 type: string
+ *                               tracking_method:
+ *                                 type: string
+ *                                 enum: [INDIVIDUAL, BATCH]
+ *                           scanned_by_user:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               name:
+ *                                 type: string
+ *                           order:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               order_id:
+ *                                 type: string
+ *                                 example: "ORD-20241225-001"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       403:
+ *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Access denied"
+ *       404:
+ *         description: Not Found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Asset not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/operations/v1/asset/{id}:
  *   patch:
  *     tags:
  *       - Asset Management
