@@ -50,7 +50,6 @@ const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
                     and(
                         eq(zones.id, data.zone_id),
                         eq(zones.warehouse_id, data.warehouse_id),
-                        eq(zones.company_id, data.company_id)
                     )
                 )
         ]);
