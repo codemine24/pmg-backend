@@ -1153,6 +1153,19 @@ const addConditionHistory = async (data: AddConditionHistoryPayload, user: AuthU
         throw new CustomizedError(httpStatus.NOT_FOUND, 'Asset not found');
     }
 
+    // Validate notes requirement
+    if (data.condition && (data.condition === "ORANGE" || data.condition === "RED") && !data.notes) {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, 'Notes are required when marking items as Orange or Red');
+    }
+
+    // Validate photos requirement
+    if (
+        data.condition && data.condition === "RED" &&
+        (!data.photos || data.photos.length === 0)
+    ) {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, 'At least one damage photo is required when marking items as Red');
+    }
+
     // Step 2: Get existing history or initialize empty array
     const existingHistory = Array.isArray(asset.condition_history)
         ? asset.condition_history
@@ -1161,8 +1174,8 @@ const addConditionHistory = async (data: AddConditionHistoryPayload, user: AuthU
     // Step 3: Create new history entry
     const newHistory = {
         condition: data.condition || asset.condition,
-        notes: data.notes,
-        photos: [],
+        notes: data.notes || "",
+        photos: data.photos || [],
         updated_by: user.id,
         timestamp: new Date().toISOString(),
     }
@@ -1170,13 +1183,26 @@ const addConditionHistory = async (data: AddConditionHistoryPayload, user: AuthU
     // Step 4: Prepend new entry (newest first)
     const condition_history = [newHistory, ...existingHistory];
 
-    // Step 5: Update asset with new history
+    // Step 5: Prepare update data with conditional refurb_days_estimate
+    const updatedData: {
+        condition_history: any[];
+        condition: string;
+        refurb_days_estimate?: number | null;
+    } = {
+        condition_history,
+        condition: data.condition || asset.condition,
+    };
+
+    if (data.condition && data.condition === 'GREEN') {
+        updatedData.refurb_days_estimate = null;
+    } else if (data.refurb_days_estimate) {
+        updatedData.refurb_days_estimate = data.refurb_days_estimate;
+    }
+
+    // Step 6: Update asset with new history
     const [result] = await db
         .update(assets)
-        .set({
-            condition_history,
-            condition: data.condition || asset.condition,
-        })
+        .set(updatedData as any)
         .where(eq(assets.id, data.asset_id))
         .returning({
             id: assets.id,

@@ -241,13 +241,17 @@ const addConditionHistorySchema = z.object({
       })
       .optional(),
     notes: z
-      .string({ message: "Notes are required" })
-      .min(1, "Notes cannot be empty")
-      .max(1000, "Notes must be under 1000 characters"),
+      .string()
+      .max(1000, "Notes must be under 1000 characters").optional(),
     photos: z
       .array(z.string().url("Invalid photo URL"))
       .optional()
       .default([]),
+    refurb_days_estimate: z
+      .number({ message: "Refurbishment days must be a number" })
+      .int("Refurbishment days must be an integer")
+      .min(0, "Refurbishment days cannot be negative")
+      .optional(),
   }),
 });
 
