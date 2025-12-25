@@ -261,6 +261,19 @@ const generateQRCodeSchema = z.object({
   }),
 });
 
+// ----------------------------------- COMPLETE MAINTENANCE SCHEMA ----------------------------
+const completeMaintenanceSchema = z.object({
+  body: z.object({
+    asset_id: z
+      .string({ message: "Asset ID is required" })
+      .uuid("Invalid asset ID format"),
+    maintenance_notes: z
+      .string({ message: "Maintenance notes are required" })
+      .min(1, "Maintenance notes cannot be empty")
+      .max(1000, "Maintenance notes must be under 1000 characters"),
+  }),
+});
+
 export const AssetSchemas = {
   createAssetSchema,
   updateAssetSchema,
@@ -268,4 +281,5 @@ export const AssetSchemas = {
   checkAvailabilitySchema,
   addConditionHistorySchema,
   generateQRCodeSchema,
+  completeMaintenanceSchema,
 };

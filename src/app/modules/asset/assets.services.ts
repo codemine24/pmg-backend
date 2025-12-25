@@ -11,6 +11,7 @@ import { qrCodeGenerator } from "../../utils/qr-code-generator";
 import queryValidator from "../../utils/query-validator";
 import {
     AddConditionHistoryPayload,
+    CompleteMaintenancePayload,
     CreateAssetPayload
 } from "./assets.interfaces";
 import { ASSET_ALL_COLUMNS, ASSET_REQUIRED_COLUMNS, assetQueryValidationConfig, assetSortableFields } from "./assets.utils";
@@ -1193,6 +1194,67 @@ const generateQRCode = async (data: { qr_code: string }) => {
     };
 };
 
+// ----------------------------------- COMPLETE MAINTENANCE -----------------------------------
+const completeMaintenance = async (data: CompleteMaintenancePayload, user: AuthUser, platformId: string) => {
+    // Step 1: Fetch asset to verify it exists and is in RED condition
+    const asset = await db.query.assets.findFirst({
+        where: and(
+            eq(assets.id, data.asset_id),
+            eq(assets.platform_id, platformId),
+            isNull(assets.deleted_at)
+        ),
+    });
+
+    if (!asset) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, 'Asset not found');
+    }
+
+    // Step 2: Validate asset is in RED condition
+    if (asset.condition !== 'RED') {
+        throw new CustomizedError(
+            httpStatus.BAD_REQUEST,
+            'Only RED condition assets can have maintenance completed'
+        );
+    }
+
+    // Step 3: Get existing history or initialize empty array
+    const existingHistory = Array.isArray(asset.condition_history)
+        ? asset.condition_history
+        : [];
+
+    // Step 4: Create new history entry for maintenance completion
+    const newHistory = {
+        condition: 'GREEN' as const,
+        notes: data.maintenance_notes,
+        photos: [],
+        updated_by: user.id,
+        timestamp: new Date().toISOString(),
+    };
+
+    // Step 5: Prepend new entry (newest first)
+    const condition_history = [newHistory, ...existingHistory];
+
+    // Step 6: Update asset - set to GREEN and AVAILABLE
+    const [result] = await db
+        .update(assets)
+        .set({
+            condition: 'GREEN',
+            status: 'AVAILABLE',
+            condition_history,
+        })
+        .where(eq(assets.id, data.asset_id))
+        .returning({
+            id: assets.id,
+            name: assets.name,
+            condition: assets.condition,
+            status: assets.status,
+            condition_history: assets.condition_history,
+            updated_at: assets.updated_at,
+        });
+
+    return result;
+};
+
 export const AssetServices = {
     createAsset,
     getAssets,
@@ -1206,4 +1268,5 @@ export const AssetServices = {
     bulkUploadAssets,
     addConditionHistory,
     generateQRCode,
+    completeMaintenance,
 };
