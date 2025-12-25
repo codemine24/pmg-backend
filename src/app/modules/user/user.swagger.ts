@@ -614,6 +614,10 @@
  *                 type: string
  *                 nullable: true
  *                 example: "CLIENT_USER"
+ *               is_active:
+ *                 type: boolean
+ *                 description: Activate or deactivate the user
+ *                 example: true
 
  *     responses:
  *       200:

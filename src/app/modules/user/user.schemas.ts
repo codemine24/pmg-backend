@@ -49,6 +49,7 @@ const updateUser = z.object({
       })
       .optional(),
     permission_template: permissionTemplateEnum.optional().nullable(),
+    is_active: z.boolean().optional(),
   }),
 });
 

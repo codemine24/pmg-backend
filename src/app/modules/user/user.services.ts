@@ -213,18 +213,27 @@ const updateUser = async (
   // Step 1: Check if user exists
   const existingUser = await getUserById(id, platformId);
 
-  // Only name, permission_template, and permissions can be updated
+  // Only name, permission_template, permissions, and is_active can be updated
   if (
     data.email ||
     data.password ||
     data.role ||
-    data.company_id ||
-    data.is_active
+    data.company_id
   ) {
     throw new CustomizedError(
       httpStatus.BAD_REQUEST,
-      "Only name, permission_template and permissions can be updated"
+      "Only name, permission_template, permissions and is_active can be updated"
     );
+  }
+
+  // Handle activation/deactivation side effects
+  let finalData: any = { ...data };
+  if (data.is_active !== undefined) {
+    if (data.is_active === false) {
+      finalData.deleted_at = new Date();
+    } else {
+      finalData.deleted_at = null;
+    }
   }
 
 
@@ -233,7 +242,6 @@ const updateUser = async (
     validateRoleAndTemplate(existingUser.role, data.permission_template);
   }
 
-  let finalData = { ...data };
   if (
     data.permission_template !== undefined ||
     data.permissions !== undefined
