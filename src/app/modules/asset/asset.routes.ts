@@ -35,6 +35,15 @@ router.post(
   AssetControllers.addConditionHistory
 );
 
+// Generate QR code
+router.post(
+  "/generate-qr-code",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS'),
+  payloadValidator(AssetSchemas.generateQRCodeSchema),
+  AssetControllers.generateQRCode
+);
+
 // Batch availability check
 router.post(
   "/batch-availability",

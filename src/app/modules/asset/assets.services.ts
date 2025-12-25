@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, sql } from "drizzle-orm";
 import httpStatus from "http-status";
+import QRCode from 'qrcode';
 import { db } from "../../../db";
 import { assetBookings, assets, brands, companies, orders, scanEvents, warehouses, zones } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
@@ -1177,6 +1178,21 @@ const addConditionHistory = async (data: AddConditionHistoryPayload, user: AuthU
     return result;
 };
 
+// ----------------------------------- GENERATE QR CODE ---------------------------------------
+const generateQRCode = async (data: { qr_code: string }) => {
+    // Generate QR code as base64 PNG
+    const qrCodeImage = await QRCode.toDataURL(data.qr_code, {
+        errorCorrectionLevel: 'H',
+        type: 'image/png',
+        width: 300,
+        margin: 2,
+    });
+
+    return {
+        qr_code_image: qrCodeImage,
+    };
+};
+
 export const AssetServices = {
     createAsset,
     getAssets,
@@ -1189,4 +1205,5 @@ export const AssetServices = {
     checkAssetAvailability,
     bulkUploadAssets,
     addConditionHistory,
+    generateQRCode,
 };

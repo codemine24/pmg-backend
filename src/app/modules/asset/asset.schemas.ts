@@ -251,10 +251,21 @@ const addConditionHistorySchema = z.object({
   }),
 });
 
+// ----------------------------------- GENERATE QR CODE SCHEMA --------------------------------
+const generateQRCodeSchema = z.object({
+  body: z.object({
+    qr_code: z
+      .string({ message: "QR code string is required" })
+      .min(1, "QR code string cannot be empty")
+      .max(500, "QR code string must be under 500 characters"),
+  }),
+});
+
 export const AssetSchemas = {
   createAssetSchema,
   updateAssetSchema,
   batchAvailabilitySchema,
   checkAvailabilitySchema,
   addConditionHistorySchema,
+  generateQRCodeSchema,
 };

@@ -204,6 +204,20 @@ const addConditionHistory = catchAsync(async (req, res) => {
     });
 });
 
+// ----------------------------------- GENERATE QR CODE -----------------------------------
+const generateQRCode = catchAsync(async (req, res) => {
+    const { qr_code } = req.body;
+
+    const result = await AssetServices.generateQRCode({ qr_code });
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "QR code generated successfully",
+        data: result,
+    });
+});
+
 export const AssetControllers = {
     createAsset,
     getAssets,
@@ -216,4 +230,5 @@ export const AssetControllers = {
     checkAssetAvailability,
     bulkUploadAssets,
     addConditionHistory,
+    generateQRCode,
 };

@@ -548,6 +548,98 @@
 
 /**
  * @swagger
+ * /api/operations/v1/asset/generate-qr-code:
+ *   post:
+ *     tags:
+ *       - Asset Management
+ *     summary: Generate QR code image
+ *     description: |
+ *       Allows ADMIN and LOGISTICS users to generate a QR code image from a text string.
+ *       Returns a base64-encoded PNG image that can be directly used in img src attributes.
+ *       The QR code is generated with high error correction level (H) for better scanning reliability.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - qr_code
+ *             properties:
+ *               qr_code:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 500
+ *                 description: Text string to encode in the QR code
+ *                 example: "ASSET-ABC-1234567890-XYZ"
+ *     responses:
+ *       200:
+ *         description: QR code generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "QR code generated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     qr_code_image:
+ *                       type: string
+ *                       description: Base64-encoded PNG image (data URL format)
+ *                       example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+ *       400:
+ *         description: Bad Request - Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "QR code string cannot be empty"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
  * /api/operations/v1/asset/batch-availability:
  *   post:
  *     tags:

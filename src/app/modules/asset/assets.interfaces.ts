@@ -9,6 +9,8 @@ export type UpdateAssetPayload = z.infer<typeof AssetSchemas.updateAssetSchema>[
 
 export type AddConditionHistoryPayload = z.infer<typeof AssetSchemas.addConditionHistorySchema>["body"];
 
+export type GenerateQRCodePayload = z.infer<typeof AssetSchemas.generateQRCodeSchema>["body"];
+
 
 // ----------------------------------- BULK UPLOAD INTERFACES ---------------------------------
 
