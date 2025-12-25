@@ -224,21 +224,41 @@ const updateUser = async (
   // Step 1: Check if user exists
   const existingUser = await getUserById(id, platformId);
 
-  // Only name, permission_template, permissions, and is_active can be updated
+  // Only name, permission_template, permissions, company_id, and is_active can be updated
   if (
     data.email ||
     data.password ||
-    data.role ||
-    data.company_id
+    data.role
   ) {
     throw new CustomizedError(
       httpStatus.BAD_REQUEST,
-      "Only name, permission_template, permissions and is_active can be updated"
+      "Only name, permission_template, permissions, company_id, and is_active can be updated"
     );
   }
 
   // Handle activation/deactivation side effects
   let finalData: any = { ...data };
+
+  // Validate company_id if provided
+  if (data.company_id) {
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(
+        and(
+          eq(companies.id, data.company_id),
+          eq(companies.platform_id, platformId),
+          isNull(companies.deleted_at)
+        )
+      );
+
+    if (!company) {
+      throw new CustomizedError(
+        httpStatus.NOT_FOUND,
+        "Company not found or is archived"
+      );
+    }
+  }
   if (data.is_active !== undefined) {
     if (data.is_active === false) {
       finalData.deleted_at = new Date();

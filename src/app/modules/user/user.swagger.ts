@@ -642,11 +642,16 @@
  *           schema:
  *             type: object
  *             properties:
+ *               company_id:
+ *                 type: string
+ *                 format: uuid
+ *                 nullable: true
+ *                 description: Company ID (required for CLIENT users, null for ADMIN/LOGISTICS)
+ *                 example: "c7dbfc23-c782-4004-9492-755ceb0cc33a"
  *               name:
  *                 type: string
  *                 description: User's full name
  *                 example: "John Due"
-
  *               permissions:
  *                 type: array
  *                 items:
