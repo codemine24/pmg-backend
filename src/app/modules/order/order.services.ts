@@ -245,7 +245,7 @@ const submitOrderFromCart = async (
 // ----------------------------------- HELPER: SEND ORDER SUBMITTED NOTIFICATIONS -------------
 const sendOrderSubmittedNotifications = async (data: OrderSubmittedEmailData): Promise<void> => {
     try {
-        // Step 1: Find all platform admins who should receive notifications
+        // Find Platform Admins (permission_template = 'PLATFORM_ADMIN' OR 'orders:receive_notifications' in permissions)
         const platformAdmins = await db
             .select({ email: users.email, name: users.name })
             .from(users)
@@ -256,7 +256,7 @@ const sendOrderSubmittedNotifications = async (data: OrderSubmittedEmailData): P
                 ) AND ${users.email} NOT LIKE '%@system.internal'`
             );
 
-        // Step 2: Find all logistics staff who should receive notifications
+        // Find Logistics (permission_template = 'LOGISTICS_STAFF' OR 'orders:receive_notifications' in permissions)
         const logisticsStaff = await db
             .select({ email: users.email, name: users.name })
             .from(users)
@@ -267,7 +267,7 @@ const sendOrderSubmittedNotifications = async (data: OrderSubmittedEmailData): P
                 ) AND ${users.email} NOT LIKE '%@system.internal'`
             );
 
-        // Step 3: Prepare email promises for platform admins
+        // Send emails to Platform Admins
         const platformAdminPromises = platformAdmins.map(async (admin) => {
             const html = renderOrderSubmittedEmail("PLATFORM_ADMIN", data);
             return sendEmail({
@@ -277,7 +277,7 @@ const sendOrderSubmittedNotifications = async (data: OrderSubmittedEmailData): P
             });
         });
 
-        // Step 4: Prepare email promises for logistics staff
+        // Send emails to Logistics Staff
         const logisticsStaffPromises = logisticsStaff.map(async (staff) => {
             const html = renderOrderSubmittedEmail("LOGISTICS_STAFF", data);
             return sendEmail({
@@ -287,11 +287,12 @@ const sendOrderSubmittedNotifications = async (data: OrderSubmittedEmailData): P
             });
         });
 
-        // Step 5: Send all emails concurrently for better performance
+        // Send all emails concurrently
         await Promise.all([...logisticsStaffPromises, ...platformAdminPromises]);
 
         console.log(`Order submission notifications sent for order ${data.orderId}`);
     } catch (error) {
+        // Log error but don't throw - email failures shouldn't block order submission
         console.error("Error sending order submission notifications:", error);
     }
 };
@@ -302,10 +303,8 @@ const sendOrderSubmittedConfirmationToClient = async (
     data: OrderSubmittedEmailData
 ): Promise<void> => {
     try {
-        // Step 1: Generate HTML email using CLIENT_USER template
         const html = renderOrderSubmittedEmail("CLIENT_USER", data);
 
-        // Step 2: Send confirmation email to client
         await sendEmail({
             to: clientEmail,
             subject: `Order Confirmation: ${data.orderId}`,
@@ -314,6 +313,7 @@ const sendOrderSubmittedConfirmationToClient = async (
 
         console.log(`Order confirmation sent to client: ${clientEmail}`);
     } catch (error) {
+        // Log error but don't throw - email failures shouldn't block order submission
         console.error("Error sending order confirmation to client:", error);
     }
 };
