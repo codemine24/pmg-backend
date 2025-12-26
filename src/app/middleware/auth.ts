@@ -18,6 +18,8 @@ const auth = (...roles: UserRole[]) => {
   ) => {
     try {
       const platformId = (req as any).platformId;
+
+
       let token = req.headers.authorization;
       if (token?.startsWith("Bearer ")) {
         token = token.split("Bearer ")[1];
@@ -42,6 +44,7 @@ const auth = (...roles: UserRole[]) => {
           )
         );
 
+
       if (!user) {
         throw new CustomizedError(
           httpStatus.UNAUTHORIZED,
@@ -53,7 +56,7 @@ const auth = (...roles: UserRole[]) => {
         throw new CustomizedError(httpStatus.UNAUTHORIZED, "You are not authorized");
       }
 
-      req.user = verifiedUser;
+      req.user = user;
 
       next();
     } catch (error: any) {
