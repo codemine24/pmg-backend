@@ -398,6 +398,156 @@
 
 /**
  * @swagger
+ * /api/operations/v1/asset/condition/add:
+ *   post:
+ *     tags:
+ *       - Asset Management
+ *     summary: Add condition history to an asset
+ *     description: |
+ *       Allows ADMIN and LOGISTICS users to add condition history to an asset.
+ *       This updates the asset's condition_history array with a new entry containing the condition, notes, and metadata.
+ *       The condition field is optional - if not provided, it uses the asset's current condition.
+ *       Useful for tracking maintenance activities, condition changes, repairs, or observations.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - asset_id
+ *               - notes
+ *             properties:
+ *               asset_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the asset to add condition history to
+ *                 example: "550e8400-e29b-41d4-a716-446655440000"
+ *               condition:
+ *                 type: string
+ *                 enum: [GREEN, ORANGE, RED]
+ *                 description: Optional condition status. If not provided, uses asset's current condition
+ *                 example: "GREEN"
+ *               notes:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 1000
+ *                 description: Condition notes or observations (max 1000 characters)
+ *                 example: "Cleaned and inspected. All components in good condition."
+ *               photos:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uri
+ *                 description: Optional array of photo URLs
+ *                 example: ["https://example.com/photo1.jpg", "https://example.com/photo2.jpg"]
+ *     responses:
+ *       201:
+ *         description: Condition history added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Condition history added successfully"
+ *                 data:
+ *                   type: object
+ *                   description: Updated asset object with new condition history
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     name:
+ *                       type: string
+ *                     condition:
+ *                       type: string
+ *                       enum: [GREEN, ORANGE, RED]
+ *                     condition_history:
+ *                       type: array
+ *                       description: Array of condition history entries (newest first)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           condition:
+ *                             type: string
+ *                             enum: [GREEN, ORANGE, RED]
+ *                           notes:
+ *                             type: string
+ *                           photos:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           updated_by:
+ *                             type: string
+ *                             format: uuid
+ *                           timestamp:
+ *                             type: string
+ *                             format: date-time
+ *       400:
+ *         description: Bad Request - Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Notes cannot be empty"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       404:
+ *         description: Asset not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Asset not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
  * /api/operations/v1/asset/batch-availability:
  *   post:
  *     tags:

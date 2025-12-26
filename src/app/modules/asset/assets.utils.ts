@@ -15,3 +15,40 @@ export const assetQueryValidationConfig = {
     sort_order: sortOrderType,
 };
 
+export const ASSET_REQUIRED_COLUMNS = [
+    'platform_id',
+    'company_id',
+    'warehouse_id',
+    'zone_id',
+    'name',
+    'category',
+    'tracking_method',
+    'qr_code',
+    'weight_per_unit',
+    'dimensions',
+    'volume_per_unit'
+];
+
+export const ASSET_ALL_COLUMNS = [
+    ...ASSET_REQUIRED_COLUMNS,
+    'id',
+    'brand_id',
+    'description',
+    'images',
+    'total_quantity',
+    'available_quantity',
+    'packaging',
+    'condition',
+    'condition_notes',
+    'refurb_days_estimate',
+    'condition_history',
+    'handling_tags',
+    'status',
+    'last_scanned_at',
+    'last_scanned_by',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'rowNumber'
+];
+
