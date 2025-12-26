@@ -3,6 +3,7 @@ import { AssetRoutes } from "../modules/asset/asset.routes";
 import { BrandRoutes } from "../modules/brand/brand.routes";
 import { CollectionRoutes } from "../modules/collection/collection.routes";
 import { CompanyRoutes } from "../modules/company/company.routes";
+import { OrderRoutes } from "../modules/order/order.routes";
 import { PlatformRoutes } from "../modules/platform/platform.routes";
 import { PricingTierRoutes } from "../modules/pricing-tier/pricing-tier.routes";
 import { UserRoutes } from "../modules/user/user.routes";
@@ -48,6 +49,10 @@ const routes = [
   {
     path: "/asset",
     route: AssetRoutes,
+  },
+  {
+    path: "/order",
+    route: OrderRoutes,
   },
 ];
 
