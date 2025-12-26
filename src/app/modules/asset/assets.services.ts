@@ -154,7 +154,7 @@ const createAsset = async (data: CreateAssetPayload, user: AuthUser) => {
             initialConditionHistory.push({
                 condition: data.condition || 'GREEN',
                 notes: data.condition_notes || 'Initial condition',
-                updated_by: user.id,
+                updated_by: user.email,
                 timestamp: new Date().toISOString(),
             });
         }
@@ -595,7 +595,7 @@ const updateAsset = async (id: string, data: any, user: AuthUser, platformId: st
                 condition: data.condition,
                 notes: data.condition_notes || null,
                 photos: [],
-                updated_by: user.id,
+                updated_by: user.email,
                 timestamp: new Date().toISOString(),
             };
 
