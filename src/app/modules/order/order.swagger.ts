@@ -1,6 +1,6 @@
 /**
  * @swagger
- * /api/operations/v1/order:
+ * /api/clients/v1/order:
  *   post:
  *     tags:
  *       - Order Management

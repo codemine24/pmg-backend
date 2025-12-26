@@ -11,7 +11,7 @@ const router = Router();
 router.post(
     "/",
     platformValidator,
-    auth("ADMIN", "LOGISTICS", "CLIENT"),
+    auth("CLIENT"),
     payloadValidator(orderSchemas.submitOrderSchema),
     OrderControllers.submitOrder
 );

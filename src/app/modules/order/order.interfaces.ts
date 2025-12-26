@@ -1,12 +1,10 @@
 import z from "zod";
-import { orderSchemas } from "./order.schemas";
+import { orderItemSchema, orderSchemas } from "./order.schemas";
 
 // Submit order payload interface
-export type SubmitOrderPayload = z.infer<typeof orderSchemas.submitOrderSchema>["body"] & {
-    platform_id: string;
-    user_id: string;
-    company_id: string;
-};
+export type SubmitOrderPayload = z.infer<typeof orderSchemas.submitOrderSchema>["body"];
+
+export type OrderItem = z.infer<typeof orderItemSchema>;
 
 // Email data interface for order notifications
 export interface OrderSubmittedEmailData {
@@ -21,4 +19,4 @@ export interface OrderSubmittedEmailData {
 }
 
 // Email recipient role type
-export type RecipientRole = 'PMG_ADMIN' | 'A2_STAFF' | 'CLIENT_USER';
+export type RecipientRole = 'PLATFORM_ADMIN' | 'LOGISTICS_STAFF' | 'CLIENT_USER';

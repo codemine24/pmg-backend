@@ -13,7 +13,9 @@ import {
     AddConditionHistoryPayload,
     CompleteMaintenancePayload,
     CreateAssetPayload,
-    GenerateQRCodePayload
+    GenerateQRCodePayload,
+    SingleAssetAvailabilityResponse,
+    UnavailableItem
 } from "./assets.interfaces";
 import { ASSET_ALL_COLUMNS, ASSET_REQUIRED_COLUMNS, assetQueryValidationConfig, assetSortableFields } from "./assets.utils";
 
@@ -715,10 +717,10 @@ const getAssetAvailabilityStats = async (id: string, user: AuthUser, platformId:
             quantity: assetBookings.quantity,
         })
         .from(assetBookings)
-        .innerJoin(orders, eq(assetBookings.order, orders.id))
+        .innerJoin(orders, eq(assetBookings.order_id, orders.id))
         .where(
             and(
-                eq(assetBookings.asset, id),
+                eq(assetBookings.asset_id, id),
                 inArray(orders.order_status, [
                     'CONFIRMED',
                     'IN_PREPARATION',
@@ -939,7 +941,7 @@ const getSingleAssetAvailability = async (
     endDate: Date,
     user: AuthUser,
     platformId: string
-) => {
+): Promise<SingleAssetAvailabilityResponse> => {
     // Verify asset exists and user has access
     const conditions: any[] = [
         eq(assets.id, assetId),
@@ -967,7 +969,7 @@ const getSingleAssetAvailability = async (
     // Get overlapping bookings
     const overlappingBookings = await db.query.assetBookings.findMany({
         where: and(
-            eq(assetBookings.asset, assetId),
+            eq(assetBookings.asset_id, assetId),
             sql`${assetBookings.blocked_from} <= ${endDate}`,
             sql`${assetBookings.blocked_until} >= ${startDate}`
         ),
@@ -985,6 +987,7 @@ const getSingleAssetAvailability = async (
     const availableQuantity = Math.max(0, asset.total_quantity - bookedQuantity);
 
     return {
+        asset_name: asset.name,
         total_quantity: asset.total_quantity,
         available_quantity: availableQuantity,
         booked_quantity: bookedQuantity,
@@ -998,20 +1001,14 @@ const getSingleAssetAvailability = async (
 };
 
 // ----------------------------------- HELPER: CHECK MULTIPLE ASSET AVAILABILITY ----------
-const checkMultipleAssetsAvailability = async (
+export const checkMultipleAssetsAvailability = async (
     items: Array<{ asset_id: string; quantity: number }>,
     startDate: Date,
     endDate: Date,
     user: AuthUser,
     platformId: string
-) => {
-    const unavailableItems: Array<{
-        asset_id: string;
-        asset_name: string;
-        requested: number;
-        available: number;
-        next_available_date?: Date;
-    }> = [];
+): Promise<{ all_available: boolean; unavailable_items: Array<UnavailableItem> }> => {
+    const unavailableItems: Array<UnavailableItem> = [];
 
     for (const item of items) {
         const availability = await getSingleAssetAvailability(
@@ -1023,12 +1020,6 @@ const checkMultipleAssetsAvailability = async (
         );
 
         if (availability.available_quantity < item.quantity) {
-            // Get asset name
-            const asset = await db.query.assets.findFirst({
-                where: eq(assets.id, item.asset_id),
-                columns: { name: true },
-            });
-
             // Find next available date
             let nextAvailableDate: Date | undefined;
             if (availability.bookings.length > 0) {
@@ -1041,7 +1032,7 @@ const checkMultipleAssetsAvailability = async (
 
             unavailableItems.push({
                 asset_id: item.asset_id,
-                asset_name: asset?.name || "Unknown",
+                asset_name: availability.asset_name,
                 requested: item.quantity,
                 available: availability.available_quantity,
                 next_available_date: nextAvailableDate,
@@ -1072,7 +1063,7 @@ const getAssetAvailabilitySummary = async (
         // Fully booked - find when it becomes available
         const futureBookings = await db.query.assetBookings.findMany({
             where: and(
-                eq(assetBookings.asset, assetId),
+                eq(assetBookings.asset_id, assetId),
                 gte(assetBookings.blocked_from, startDate)
             ),
             orderBy: (bookings, { asc }) => [asc(bookings.blocked_until)],

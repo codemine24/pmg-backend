@@ -10,14 +10,6 @@ const submitOrder = catchAsync(async (req, res) => {
     const user = (req as any).user;
     const platformId = (req as any).platformId;
 
-    // Check permission
-    if (!user.permissions?.includes("orders:create")) {
-        throw new CustomizedError(
-            httpStatus.FORBIDDEN,
-            "You do not have permission to submit orders"
-        );
-    }
-
     // Get company ID from user
     const companyId = user.company_id;
     if (!companyId) {
@@ -26,46 +18,49 @@ const submitOrder = catchAsync(async (req, res) => {
 
     // Submit order
     const result = await OrderServices.submitOrderFromCart(
-        user.id,
+        user,
         companyId,
         platformId,
         req.body
     );
 
     // Send email notifications (don't block on errors)
-    try {
-        const emailData = {
-            orderId: result.orderId,
-            companyName: result.companyName,
-            eventStartDate: req.body.eventStartDate,
-            eventEndDate: req.body.eventEndDate,
-            venueCity: req.body.venueCity,
-            totalVolume: result.calculatedVolume,
-            itemCount: result.itemCount,
-            viewOrderUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders/${result.orderId}`,
-        };
+    // try {
+    //     const emailData = {
+    //         orderId: result.orderId,
+    //         companyName: result.companyName,
+    //         eventStartDate: req.body.eventStartDate,
+    //         eventEndDate: req.body.eventEndDate,
+    //         venueCity: req.body.venueCity,
+    //         totalVolume: result.calculatedVolume,
+    //         itemCount: result.itemCount,
+    //         viewOrderUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders/${result.orderId}`,
+    //     };
 
-        await OrderServices.sendOrderSubmittedNotifications(emailData);
-        await OrderServices.sendOrderSubmittedConfirmationToClient(
-            req.body.contactEmail,
-            req.body.contactName,
-            emailData
-        );
-    } catch (emailError) {
-        console.error("Error sending email notifications:", emailError);
-    }
+    //     await OrderServices.sendOrderSubmittedNotifications(emailData);
+    //     await OrderServices.sendOrderSubmittedConfirmationToClient(
+    //         req.body.contactEmail,
+    //         req.body.contactName,
+    //         emailData
+    //     );
+    // } catch (emailError) {
+    //     console.error("Error sending email notifications:", emailError);
+    // }
 
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
         success: true,
         message: "Order submitted successfully. You will receive a quote via email within 24-48 hours.",
-        data: {
-            orderId: result.orderId,
-            status: result.status,
-        },
+        data: result,
     });
 });
 
 export const OrderControllers = {
     submitOrder,
 };
+
+
+// {
+//     orderId: result.orderId,
+//         status: result.status,
+//         }
