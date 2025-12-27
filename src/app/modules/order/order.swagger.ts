@@ -464,6 +464,289 @@
 
 /**
  * @swagger
+ * /api/client/v1/order/{id}:
+ *   get:
+ *     tags:
+ *       - Order Management
+ *     summary: Get order by ID
+ *     description: |
+ *       Retrieves detailed information about a specific order including:
+ *       - Complete order details (contact, venue, event dates, etc.)
+ *       - Order items with asset and collection information
+ *       - Company, brand, and user information
+ *       - Pricing and delivery window details
+ *       
+ *       **Access Control:**
+ *       - CLIENT users can only access their own company's orders
+ *       - ADMIN and LOGISTICS users can access all orders
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Order ID (UUID)
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *     responses:
+ *       200:
+ *         description: Order fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Order fetched successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     platform_id:
+ *                       type: string
+ *                       format: uuid
+ *                     order_id:
+ *                       type: string
+ *                       example: "ORD-20251227-001"
+ *                     company_id:
+ *                       type: string
+ *                       format: uuid
+ *                     brand_id:
+ *                       type: string
+ *                       format: uuid
+ *                       nullable: true
+ *                     user_id:
+ *                       type: string
+ *                       format: uuid
+ *                     job_number:
+ *                       type: string
+ *                       nullable: true
+ *                     contact_name:
+ *                       type: string
+ *                     contact_email:
+ *                       type: string
+ *                     contact_phone:
+ *                       type: string
+ *                     event_start_date:
+ *                       type: string
+ *                       format: date-time
+ *                     event_end_date:
+ *                       type: string
+ *                       format: date-time
+ *                     venue_name:
+ *                       type: string
+ *                     venue_location:
+ *                       type: object
+ *                       properties:
+ *                         country:
+ *                           type: string
+ *                         city:
+ *                           type: string
+ *                         address:
+ *                           type: string
+ *                         access_notes:
+ *                           type: string
+ *                           nullable: true
+ *                     special_instructions:
+ *                       type: string
+ *                       nullable: true
+ *                     delivery_window:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         start:
+ *                           type: string
+ *                           format: date-time
+ *                         end:
+ *                           type: string
+ *                           format: date-time
+ *                     pickup_window:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         start:
+ *                           type: string
+ *                           format: date-time
+ *                         end:
+ *                           type: string
+ *                           format: date-time
+ *                     calculated_totals:
+ *                       type: object
+ *                       properties:
+ *                         volume:
+ *                           type: string
+ *                         weight:
+ *                           type: string
+ *                     tier_id:
+ *                       type: string
+ *                       format: uuid
+ *                       nullable: true
+ *                     logistics_pricing:
+ *                       type: object
+ *                       nullable: true
+ *                     platform_pricing:
+ *                       type: object
+ *                       nullable: true
+ *                     final_pricing:
+ *                       type: object
+ *                       nullable: true
+ *                     invoice_id:
+ *                       type: string
+ *                       nullable: true
+ *                     invoice_generated_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     invoice_paid_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     payment_method:
+ *                       type: string
+ *                       nullable: true
+ *                     payment_reference:
+ *                       type: string
+ *                       nullable: true
+ *                     order_status:
+ *                       type: string
+ *                       example: "PRICING_REVIEW"
+ *                     financial_status:
+ *                       type: string
+ *                       example: "PENDING_QUOTE"
+ *                     order_status_history:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     financial_status_history:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     scanning_data:
+ *                       type: object
+ *                     delivery_photos:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *                     deleted_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     company:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *                     brand:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           order_item:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               platform_id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               order_id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               asset_id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               asset_name:
+ *                                 type: string
+ *                               quantity:
+ *                                 type: integer
+ *                               volume_per_unit:
+ *                                 type: string
+ *                               weight_per_unit:
+ *                                 type: string
+ *                               total_volume:
+ *                                 type: string
+ *                               total_weight:
+ *                                 type: string
+ *                               from_collection:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 nullable: true
+ *                               from_collection_name:
+ *                                 type: string
+ *                                 nullable: true
+ *                               created_at:
+ *                                 type: string
+ *                                 format: date-time
+ *                           asset:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               name:
+ *                                 type: string
+ *                               condition:
+ *                                 type: string
+ *                           collection:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               name:
+ *                                 type: string
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *       403:
+ *         description: Forbidden - You don't have access to this order
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Internal server error
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
  * /api/client/v1/order/submit-from-cart:
  *   post:
  *     tags:
