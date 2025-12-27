@@ -4,7 +4,7 @@ import { db } from "../../../db";
 import { assetBookings, assetConditionHistory, assets, orderStatusHistory, orders, scanEvents } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
 import { AuthUser } from "../../interface/common";
-import { CompleteInboundScanResponse, InboundScanPayload, InboundScanResponse, OrderProgressResponse, OutboundScanPayload, OutboundScanResponse } from "./scanning.interfaces";
+import { CompleteInboundScanResponse, CompleteOutboundScanResponse, InboundScanPayload, InboundScanResponse, OrderProgressResponse, OutboundScanPayload, OutboundScanResponse } from "./scanning.interfaces";
 
 // ----------------------------------- INBOUND SCAN ---------------------------------------
 const inboundScan = async (
@@ -516,6 +516,88 @@ const outboundScan = async (
     };
 };
 
+// ----------------------------------- COMPLETE OUTBOUND SCAN ----------------------------------
+const completeOutboundScan = async (
+    orderId: string,
+    user: AuthUser,
+    platformId: string
+): Promise<CompleteOutboundScanResponse> => {
+    // Step 1: Get order with items
+    const order = await db.query.orders.findFirst({
+        where: and(
+            eq(orders.id, orderId),
+            eq(orders.platform_id, platformId)
+        ),
+        with: {
+            company: true,
+            items: true,
+        },
+    });
+
+    if (!order) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, "Order not found");
+    }
+
+    // Step 2: Validate order status
+    if (order.order_status !== 'IN_PREPARATION') {
+        throw new CustomizedError(
+            httpStatus.BAD_REQUEST,
+            `Cannot complete outbound scan. Order status must be IN_PREPARATION, current: ${order.order_status}`
+        );
+    }
+
+    // Step 3: Get all outbound scan events
+    const outboundScans = await db.query.scanEvents.findMany({
+        where: and(
+            eq(scanEvents.order_id, orderId),
+            eq(scanEvents.scan_type, 'OUTBOUND')
+        ),
+    });
+
+    // Step 4: Validate all items scanned
+    const totalRequired = order.items.reduce(
+        (sum, item) => sum + item.quantity,
+        0
+    );
+    const totalScanned = outboundScans.reduce(
+        (sum, scan) => sum + scan.quantity,
+        0
+    );
+
+    if (totalScanned < totalRequired) {
+        throw new CustomizedError(
+            httpStatus.BAD_REQUEST,
+            `Not all items scanned. Scanned: ${totalScanned}, Required: ${totalRequired}`
+        );
+    }
+
+    // Step 5: Update order status to READY_FOR_DELIVERY
+    await db
+        .update(orders)
+        .set({
+            order_status: 'READY_FOR_DELIVERY',
+        })
+        .where(eq(orders.id, orderId));
+
+    // Step 6: Create status history entry
+    await db.insert(orderStatusHistory).values({
+        platform_id: platformId,
+        order_id: orderId,
+        status: 'READY_FOR_DELIVERY',
+        notes: 'All items scanned out and ready for delivery',
+        updated_by: user.id,
+    });
+
+    // TODO: Step 7: Send notification (implement notification service)
+    // sendNotification('READY_FOR_DELIVERY', orderId)
+
+    return {
+        message: 'Outbound scan completed successfully',
+        order_id: order.order_id,
+        new_status: 'READY_FOR_DELIVERY',
+    };
+};
+
 // ----------------------------------- GET OUTBOUND PROGRESS -----------------------------------
 const getOutboundProgress = async (
     orderId: string,
@@ -591,5 +673,6 @@ export const ScanningServices = {
     getInboundProgress,
     completeInboundScan,
     outboundScan,
+    completeOutboundScan,
     getOutboundProgress,
 };

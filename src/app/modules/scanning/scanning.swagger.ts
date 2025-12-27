@@ -993,3 +993,136 @@
  *     security:
  *       - BearerAuth: []
  */
+
+/**
+ * @swagger
+ * /api/operations/v1/scanning/outbound/{order_id}/complete:
+ *   post:
+ *     tags:
+ *       - Scanning
+ *     summary: Complete outbound scanning and dispatch order
+ *     description: |
+ *       Finalizes the outbound scanning process for an order.
+ *       Verifies that all required items have been scanned out.
+ *       If successful, updates the order status to READY_FOR_DELIVERY.
+ *       
+ *       **Permissions Required**: Only ADMIN and LOGISTICS roles can complete scanning
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - in: path
+ *         name: order_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Order ID
+ *         example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *     responses:
+ *       200:
+ *         description: Outbound scanning completed and order updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Outbound scan completed successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     order_id:
+ *                       type: string
+ *                       description: Human-readable order ID
+ *                       example: "ORD-20251227-001"
+ *                     new_status:
+ *                       type: string
+ *                       description: New status of the order
+ *                       example: "READY_FOR_DELIVERY"
+ *             example:
+ *               success: true
+ *               message: "Outbound scan completed successfully"
+ *               data:
+ *                 order_id: "ORD-20251227-001"
+ *                 new_status: "READY_FOR_DELIVERY"
+ *       400:
+ *         description: Bad request - Validation failed (e.g. items missing, wrong status)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               wrongStatus:
+ *                 summary: Order not in IN_PREPARATION status
+ *                 value:
+ *                   success: false
+ *                   message: "Cannot complete outbound scan. Order status must be IN_PREPARATION, current: CONFIRMED"
+ *               missingItems:
+ *                 summary: Not all items have been scanned
+ *                 value:
+ *                   success: false
+ *                   message: "Not all items scanned. Scanned: 90, Required: 100"
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       403:
+ *         description: Forbidden - Only warehouse staff can complete scanning
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Only warehouse staff can complete scanning"
+ *       404:
+ *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Order not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */

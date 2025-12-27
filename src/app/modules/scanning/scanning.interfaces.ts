@@ -68,3 +68,9 @@ export interface OutboundScanResponse {
         percent_complete: number;
     };
 }
+
+export interface CompleteOutboundScanResponse {
+    message: string;
+    order_id: string;
+    new_status: string;
+}

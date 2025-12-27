@@ -114,10 +114,34 @@ const getOutboundProgress = catchAsync(async (req, res) => {
     });
 });
 
+// ----------------------------------- COMPLETE OUTBOUND SCAN ------------------------------
+const completeOutboundScan = catchAsync(async (req, res) => {
+    const platformId = (req as any).platformId;
+    const user = (req as any).user;
+    const { order_id } = req.params;
+
+    const result = await ScanningServices.completeOutboundScan(
+        order_id,
+        user,
+        platformId
+    );
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: result.message,
+        data: {
+            order_id: result.order_id,
+            new_status: result.new_status,
+        },
+    });
+});
+
 export const ScanningControllers = {
     inboundScan,
     getInboundProgress,
     completeInboundScan,
     outboundScan,
+    completeOutboundScan,
     getOutboundProgress,
 };

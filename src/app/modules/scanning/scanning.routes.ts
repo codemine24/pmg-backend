@@ -51,4 +51,12 @@ router.get(
   ScanningControllers.getOutboundProgress
 );
 
+// Complete outbound scan
+router.post(
+  "/outbound/:order_id/complete",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS'),
+  ScanningControllers.completeOutboundScan
+);
+
 export const ScanningRoutes = router;
