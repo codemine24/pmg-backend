@@ -48,6 +48,14 @@ router.patch(
     OrderControllers.updateJobNumber
 );
 
+// Get order scan events
+router.get(
+    "/:orderId/scan-events",
+    platformValidator,
+    auth("ADMIN", "LOGISTICS"),
+    OrderControllers.getOrderScanEvents
+);
+
 // Submit order
 router.post(
     "/submit-from-cart",

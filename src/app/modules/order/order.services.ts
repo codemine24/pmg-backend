@@ -10,6 +10,7 @@ import {
     orderItems,
     orders,
     pricingTiers,
+    scanEvents,
     users
 } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
@@ -322,7 +323,7 @@ const sendOrderSubmittedConfirmationToClient = async (
     }
 };
 
-// ----------------------------------- GET ORDERS -----------------------------------------
+// ----------------------------------- GET ORDERS ---------------------------------------------
 const getOrders = async (query: Record<string, any>, user: AuthUser, platformId: string) => {
     const {
         search_term,
@@ -506,7 +507,7 @@ const getOrders = async (query: Record<string, any>, user: AuthUser, platformId:
     };
 };
 
-// ----------------------------------- GET MY ORDERS -----------------------------------------
+// ----------------------------------- GET MY ORDERS ------------------------------------------
 const getMyOrders = async (query: Record<string, any>, user: AuthUser, platformId: string) => {
     const {
         search_term,
@@ -713,7 +714,6 @@ const getOrderById = async (orderId: string, user: AuthUser, platformId: string)
 const updateJobNumber = async (
     orderId: string,
     jobNumber: string | null,
-    user: AuthUser,
     platformId: string
 ) => {
     // Step 1: Verify order exists
@@ -747,10 +747,62 @@ const updateJobNumber = async (
     };
 };
 
+// ----------------------------------- GET ORDER SCAN EVENTS ----------------------------------
+const getOrderScanEvents = async (orderId: string, platformId: string) => {
+    // Step 1: Verify order exists and user has access
+    const [order] = await db
+        .select()
+        .from(orders)
+        .where(and(
+            eq(orders.id, orderId),
+            eq(orders.platform_id, platformId)
+        ));
+
+    if (!order) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, "Order not found");
+    }
+
+    // Step 3: Fetch scan events with asset and user details
+    const events = await db
+        .select({
+            scanEvent: scanEvents,
+            asset: {
+                id: assets.id,
+                name: assets.name,
+                qr_code: assets.qr_code,
+                tracking_method: assets.tracking_method,
+            },
+            scannedByUser: {
+                id: users.id,
+                name: users.name,
+            },
+        })
+        .from(scanEvents)
+        .leftJoin(assets, eq(scanEvents.asset_id, assets.id))
+        .leftJoin(users, eq(scanEvents.scanned_by, users.id))
+        .where(eq(scanEvents.order_id, orderId))
+        .orderBy(desc(scanEvents.scanned_at));
+
+    // Step 4: Format results
+    const formattedResult = events.map((event) => ({
+        ...event.scanEvent,
+        asset: event.asset,
+        scanned_by_user: event.scannedByUser,
+        order: {
+            id: order.id,
+            order_id: order.order_id
+        }
+    }))
+
+    // Step 5: Return results
+    return formattedResult;
+};
+
 export const OrderServices = {
     submitOrderFromCart,
     getOrders,
     getMyOrders,
     getOrderById,
     updateJobNumber,
+    getOrderScanEvents,
 };
