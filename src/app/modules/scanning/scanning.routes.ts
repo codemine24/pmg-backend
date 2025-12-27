@@ -24,4 +24,12 @@ router.get(
   ScanningControllers.getInboundProgress
 );
 
+// Complete inbound scan
+router.post(
+  "/inbound/:order_id/complete",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS'),
+  ScanningControllers.completeInboundScan
+);
+
 export const ScanningRoutes = router;

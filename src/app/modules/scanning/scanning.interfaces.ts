@@ -38,3 +38,9 @@ export interface OrderProgressResponse {
     percent_complete: number;
     assets: AssetProgress[];
 }
+
+export interface CompleteInboundScanResponse {
+    message: string;
+    order_id: string;
+    new_status: string;
+}
