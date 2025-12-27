@@ -2,20 +2,18 @@ import { Router } from "express";
 import auth from "../../middleware/auth";
 import payloadValidator from "../../middleware/payload-validator";
 import platformValidator from "../../middleware/platform-validator";
-import { AssetControllers } from "./scanning.controllers";
-import { AssetSchemas } from "./scanning.schemas";
+import { ScanningControllers } from "./scanning.controllers";
+import { ScanningSchemas } from "./scanning.schemas";
 
 const router = Router();
 
-// Create asset
+// Inbound scan
 router.post(
-  "/",
+  "/inbound/:order_id/scan",
   platformValidator,
   auth('ADMIN', 'LOGISTICS'),
-  payloadValidator(AssetSchemas.createAssetSchema),
-  AssetControllers.createAsset
+  payloadValidator(ScanningSchemas.inboundScanSchema),
+  ScanningControllers.inboundScan
 );
 
-
-
-export const AssetRoutes = router;
+export const ScanningRoutes = router;
