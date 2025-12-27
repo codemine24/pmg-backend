@@ -590,4 +590,231 @@
  *       - BearerAuth: []
  */
 
+/**
+ * @swagger
+ * /api/operations/v1/scanning/outbound/{order_id}/scan:
+ *   post:
+ *     tags:
+ *       - Scanning
+ *     summary: Scan item outbound (warehouse dispatch)
+ *     description: |
+ *       Records an outbound scan when items are being sent out from the warehouse to a client/event.
+ *       This stateless endpoint writes directly to scan_events table and updates asset quantities.
+ *       
+ *       **Features:**
+ *       - QR code-based asset identification
+ *       - Support for both INDIVIDUAL and BATCH tracking
+ *       - Automatic asset quantity updates
+ *       - Real-time validation against order requirements
+ *       - Over-scanning prevention
+ *       
+ *       **Permissions Required**: Only ADMIN and LOGISTICS roles can scan items
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - in: path
+ *         name: order_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Order ID
+ *         example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - qr_code
+ *             properties:
+ *               qr_code:
+ *                 type: string
+ *                 minLength: 1
+ *                 description: QR code of the asset being scanned
+ *                 example: "ASSET-001-2025"
+ *               quantity:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: Quantity to scan out (required for BATCH tracking assets)
+ *                 example: 10
+ *           examples:
+ *             individualScan:
+ *               summary: Individual item scan
+ *               value:
+ *                 qr_code: "ASSET-001-2025"
+ *             batchScan:
+ *               summary: Batch scan of multiple units
+ *               value:
+ *                 qr_code: "BATCH-CHAIRS-001"
+ *                 quantity: 25
+ *     responses:
+ *       200:
+ *         description: Item scanned out successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Item scanned out successfully"
+ *                 data:
+ *                   type: object
+ *                   description: Updated asset and scan information
+ *                   properties:
+ *                     scan_event_id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: ID of the created scan event
+ *                       example: "d1e2f3a4-b5c6-7890-abcd-ef1234567890"
+ *                     asset:
+ *                       type: object
+ *                       description: Updated asset information
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *                         qr_code:
+ *                           type: string
+ *                         total_quantity:
+ *                           type: integer
+ *                         available_quantity:
+ *                           type: integer
+ *                         out_quantity:
+ *                           type: integer
+ *                         status:
+ *                           type: string
+ *                           enum: [AVAILABLE, BOOKED, OUT, MAINTENANCE]
+ *                     scanned_quantity:
+ *                       type: integer
+ *                       description: Quantity scanned in this operation
+ *                       example: 10
+ *             example:
+ *               success: true
+ *               message: "Item scanned out successfully"
+ *               data:
+ *                 scan_event_id: "d1e2f3a4-b5c6-7890-abcd-ef1234567890"
+ *                 asset:
+ *                   id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *                   name: "Banquet Chair - Gold"
+ *                   qr_code: "BATCH-CHAIRS-001"
+ *                   total_quantity: 100
+ *                   available_quantity: 50
+ *                   out_quantity: 50
+ *                   status: "OUT"
+ *                 scanned_quantity: 25
+ *       400:
+ *         description: Bad request - Validation errors or business rule violations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               missingQrCode:
+ *                 summary: QR code not provided
+ *                 value:
+ *                   success: false
+ *                   message: "QR code is required"
+ *               assetNotInOrder:
+ *                 summary: Asset not part of this order
+ *                 value:
+ *                   success: false
+ *                   message: "Asset not in this order"
+ *               quantityRequired:
+ *                 summary: Quantity missing for batch asset
+ *                 value:
+ *                   success: false
+ *                   message: "Quantity required for BATCH assets"
+ *               overScanning:
+ *                 summary: Attempting to scan more than required
+ *                 value:
+ *                   success: false
+ *                   message: "Cannot scan 30 units. Order requires only 50, already scanned: 45"
+ *               insufficientStock:
+ *                 summary: Not enough available stock
+ *                 value:
+ *                   success: false
+ *                   message: "Insufficient available quantity. Available: 10, Requested: 25"
+ *               wrongOrderStatus:
+ *                 summary: Order not in correct status for outbound scanning
+ *                 value:
+ *                   success: false
+ *                   message: "Order must be in CONFIRMED status to scan items out"
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       403:
+ *         description: Forbidden - Only warehouse staff can scan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Only warehouse staff can scan items"
+ *       404:
+ *         description: Not Found - Order or asset not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               orderNotFound:
+ *                 summary: Order not found
+ *                 value:
+ *                   success: false
+ *                   message: "Order not found"
+ *               assetNotFound:
+ *                 summary: Asset not found by QR code
+ *                 value:
+ *                   success: false
+ *                   message: "Asset not found with this QR code"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong!"
+ *     security:
+ *       - BearerAuth: []
+ */
 
