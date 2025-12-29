@@ -104,9 +104,6 @@
  *                     total:
  *                       type: integer
  *                       example: 50
- *                     total_pages:
- *                       type: integer
- *                       example: 5
  *                 data:
  *                   type: array
  *                   items:
@@ -198,6 +195,550 @@
  *                           type: string
  *       401:
  *         description: Unauthorized - Authentication required
+ *       500:
+ *         description: Internal server error
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/client/v1/order/my:
+ *   get:
+ *     tags:
+ *       - Order Management
+ *     summary: Get my orders (CLIENT only)
+ *     description: |
+ *       Retrieves orders created by the authenticated CLIENT user.
+ *       This endpoint is specifically for CLIENT users to view their own submitted orders.
+ *       Returns orders with basic information without item details.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: page
+ *         in: query
+ *         description: Page number for pagination
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - name: limit
+ *         in: query
+ *         description: Number of items per page
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - name: search_term
+ *         in: query
+ *         description: Search by order ID, contact name, venue name, or asset name
+ *         schema:
+ *           type: string
+ *       - name: brand_id
+ *         in: query
+ *         description: Filter by brand ID
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - name: order_status
+ *         in: query
+ *         description: Filter by order status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, SUBMITTED, PRICING_REVIEW, PENDING_APPROVAL, QUOTED, DECLINED, CONFIRMED, IN_PREPARATION, READY_FOR_DELIVERY, IN_TRANSIT, DELIVERED, IN_USE, AWAITING_RETURN, CLOSED]
+ *       - name: financial_status
+ *         in: query
+ *         description: Filter by financial status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING_QUOTE, QUOTE_SENT, QUOTE_ACCEPTED, PENDING_INVOICE, INVOICED, PAID]
+ *       - name: date_from
+ *         in: query
+ *         description: Filter orders created from this date (ISO 8601)
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - name: date_to
+ *         in: query
+ *         description: Filter orders created until this date (ISO 8601)
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - name: sort_by
+ *         in: query
+ *         description: Field to sort by
+ *         schema:
+ *           type: string
+ *           enum: [order_id, order_status, financial_status, event_start_date, created_at, updated_at]
+ *           default: created_at
+ *       - name: sort_order
+ *         in: query
+ *         description: Sort order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: My orders fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Orders fetched successfully"
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     total:
+ *                       type: integer
+ *                       example: 25
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       platform_id:
+ *                         type: string
+ *                         format: uuid
+ *                       order_id:
+ *                         type: string
+ *                         example: "ORD-20251227-001"
+ *                       company:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                       brand:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                       user_id:
+ *                         type: string
+ *                         format: uuid
+ *                       job_number:
+ *                         type: string
+ *                         nullable: true
+ *                       contact_name:
+ *                         type: string
+ *                       contact_email:
+ *                         type: string
+ *                       contact_phone:
+ *                         type: string
+ *                       event_start_date:
+ *                         type: string
+ *                         format: date-time
+ *                       event_end_date:
+ *                         type: string
+ *                         format: date-time
+ *                       venue_name:
+ *                         type: string
+ *                       venue_location:
+ *                         type: object
+ *                       special_instructions:
+ *                         type: string
+ *                         nullable: true
+ *                       calculated_totals:
+ *                         type: object
+ *                       order_status:
+ *                         type: string
+ *                       financial_status:
+ *                         type: string
+ *                       tier_id:
+ *                         type: string
+ *                         format: uuid
+ *                         nullable: true
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                       updated_at:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *       403:
+ *         description: Forbidden - Only CLIENT users can access this endpoint
+ *       500:
+ *         description: Internal server error
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/client/v1/order/export:
+ *   get:
+ *     tags:
+ *       - Order Management
+ *     summary: Export orders to CSV (ADMIN/LOGISTICS only)
+ *     description: |
+ *       Exports orders to a CSV file with all order details.
+ *       This endpoint uses the same filtering options as the GET orders endpoint.
+ *       Maximum 10,000 records can be exported at once.
+ *       Only ADMIN and LOGISTICS users can export orders.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: search_term
+ *         in: query
+ *         description: Search by order ID, contact name, venue name, or asset name
+ *         schema:
+ *           type: string
+ *       - name: company_id
+ *         in: query
+ *         description: Filter by company ID
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - name: brand_id
+ *         in: query
+ *         description: Filter by brand ID
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - name: order_status
+ *         in: query
+ *         description: Filter by order status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, SUBMITTED, PRICING_REVIEW, PENDING_APPROVAL, QUOTED, DECLINED, CONFIRMED, IN_PREPARATION, READY_FOR_DELIVERY, IN_TRANSIT, DELIVERED, IN_USE, AWAITING_RETURN, CLOSED]
+ *       - name: financial_status
+ *         in: query
+ *         description: Filter by financial status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING_QUOTE, QUOTE_SENT, QUOTE_ACCEPTED, PENDING_INVOICE, INVOICED, PAID]
+ *       - name: date_from
+ *         in: query
+ *         description: Filter orders created from this date (ISO 8601)
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - name: date_to
+ *         in: query
+ *         description: Filter orders created until this date (ISO 8601)
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *     responses:
+ *       200:
+ *         description: CSV file download
+ *         content:
+ *           text/csv:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *         headers:
+ *           Content-Disposition:
+ *             description: Attachment filename
+ *             schema:
+ *               type: string
+ *               example: 'attachment; filename="orders-export-2025-12-27T11-48-00.csv"'
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *       403:
+ *         description: Forbidden - Only ADMIN and LOGISTICS users can export
+ *       500:
+ *         description: Internal server error
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/client/v1/order/{id}:
+ *   get:
+ *     tags:
+ *       - Order Management
+ *     summary: Get order by ID
+ *     description: |
+ *       Retrieves detailed information about a specific order including:
+ *       - Complete order details (contact, venue, event dates, etc.)
+ *       - Order items with asset and collection information
+ *       - Company, brand, and user information
+ *       - Pricing and delivery window details
+ *       
+ *       **Access Control:**
+ *       - CLIENT users can only access their own company's orders
+ *       - ADMIN and LOGISTICS users can access all orders
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Order ID (UUID)
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *     responses:
+ *       200:
+ *         description: Order fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Order fetched successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     platform_id:
+ *                       type: string
+ *                       format: uuid
+ *                     order_id:
+ *                       type: string
+ *                       example: "ORD-20251227-001"
+ *                     company_id:
+ *                       type: string
+ *                       format: uuid
+ *                     brand_id:
+ *                       type: string
+ *                       format: uuid
+ *                       nullable: true
+ *                     user_id:
+ *                       type: string
+ *                       format: uuid
+ *                     job_number:
+ *                       type: string
+ *                       nullable: true
+ *                     contact_name:
+ *                       type: string
+ *                     contact_email:
+ *                       type: string
+ *                     contact_phone:
+ *                       type: string
+ *                     event_start_date:
+ *                       type: string
+ *                       format: date-time
+ *                     event_end_date:
+ *                       type: string
+ *                       format: date-time
+ *                     venue_name:
+ *                       type: string
+ *                     venue_location:
+ *                       type: object
+ *                       properties:
+ *                         country:
+ *                           type: string
+ *                         city:
+ *                           type: string
+ *                         address:
+ *                           type: string
+ *                         access_notes:
+ *                           type: string
+ *                           nullable: true
+ *                     special_instructions:
+ *                       type: string
+ *                       nullable: true
+ *                     delivery_window:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         start:
+ *                           type: string
+ *                           format: date-time
+ *                         end:
+ *                           type: string
+ *                           format: date-time
+ *                     pickup_window:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         start:
+ *                           type: string
+ *                           format: date-time
+ *                         end:
+ *                           type: string
+ *                           format: date-time
+ *                     calculated_totals:
+ *                       type: object
+ *                       properties:
+ *                         volume:
+ *                           type: string
+ *                         weight:
+ *                           type: string
+ *                     tier_id:
+ *                       type: string
+ *                       format: uuid
+ *                       nullable: true
+ *                     logistics_pricing:
+ *                       type: object
+ *                       nullable: true
+ *                     platform_pricing:
+ *                       type: object
+ *                       nullable: true
+ *                     final_pricing:
+ *                       type: object
+ *                       nullable: true
+ *                     invoice_id:
+ *                       type: string
+ *                       nullable: true
+ *                     invoice_generated_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     invoice_paid_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     payment_method:
+ *                       type: string
+ *                       nullable: true
+ *                     payment_reference:
+ *                       type: string
+ *                       nullable: true
+ *                     order_status:
+ *                       type: string
+ *                       example: "PRICING_REVIEW"
+ *                     financial_status:
+ *                       type: string
+ *                       example: "PENDING_QUOTE"
+ *                     order_status_history:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     financial_status_history:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     scanning_data:
+ *                       type: object
+ *                     delivery_photos:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *                     deleted_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     company:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *                     brand:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           order_item:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               platform_id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               order_id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               asset_id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               asset_name:
+ *                                 type: string
+ *                               quantity:
+ *                                 type: integer
+ *                               volume_per_unit:
+ *                                 type: string
+ *                               weight_per_unit:
+ *                                 type: string
+ *                               total_volume:
+ *                                 type: string
+ *                               total_weight:
+ *                                 type: string
+ *                               from_collection:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 nullable: true
+ *                               from_collection_name:
+ *                                 type: string
+ *                                 nullable: true
+ *                               created_at:
+ *                                 type: string
+ *                                 format: date-time
+ *                           asset:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               name:
+ *                                 type: string
+ *                               condition:
+ *                                 type: string
+ *                           collection:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               name:
+ *                                 type: string
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *       403:
+ *         description: Forbidden - You don't have access to this order
+ *       404:
+ *         description: Order not found
  *       500:
  *         description: Internal server error
  *     security:

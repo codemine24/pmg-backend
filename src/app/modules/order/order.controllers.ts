@@ -48,9 +48,120 @@ const getOrders = catchAsync(async (req, res) => {
     });
 });
 
+// ----------------------------------- GET ORDERS -----------------------------------------
+const getMyOrders = catchAsync(async (req, res) => {
+    const user = (req as any).user;
+    const platformId = (req as any).platformId;
+
+    const result = await OrderServices.getMyOrders(req.query, user, platformId);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Orders fetched successfully",
+        meta: result.meta,
+        data: result.data,
+    });
+});
+
+// ----------------------------------- EXPORT ORDERS --------------------------------------
+const exportOrders = catchAsync(async (req, res) => {
+    const user = (req as any).user;
+    const platformId = (req as any).platformId;
+
+    // Fetch all matching orders (no pagination, max 10,000 records)
+    const query = {
+        ...req.query,
+        page: 1,
+        limit: 10000, // Max export limit
+        sort_by: 'created_at',
+        sort_order: 'desc',
+    };
+
+    const result = await OrderServices.getOrders(query, user, platformId);
+
+    // Build CSV headers
+    const headers = [
+        'Order ID',
+        'Company',
+        'Brand',
+        'Job Number',
+        'Contact Name',
+        'Contact Email',
+        'Contact Phone',
+        'Event Start',
+        'Event End',
+        'Venue Name',
+        'Venue City',
+        'Venue Country',
+        'Volume (m³)',
+        'Weight (kg)',
+        'Order Status',
+        'Financial Status',
+        'Item Count',
+        'Created At',
+    ];
+
+    // Build CSV rows
+    const rows = result.data.map((order) => [
+        order.order_id || '',
+        order.company?.name || '',
+        order.brand?.name || '',
+        order.job_number || '',
+        order.contact_name || '',
+        order.contact_email || '',
+        order.contact_phone || '',
+        order.event_start_date || '',
+        order.event_end_date || '',
+        order.venue_name || '',
+        (order.venue_location as any)?.city || '',
+        (order.venue_location as any)?.country || '',
+        (order.calculated_totals as any)?.volume || '',
+        (order.calculated_totals as any)?.weight || '',
+        order.order_status || '',
+        order.financial_status || '',
+        order.item_count || 0,
+        order.created_at || '',
+    ]);
+
+    // Convert to CSV
+    const csvContent = [
+        headers.join(','),
+        ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+    const filename = `orders-export-${timestamp}.csv`;
+
+    // Set response headers for CSV download
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(httpStatus.OK).send(csvContent);
+});
+
+// ----------------------------------- GET ORDER BY ID ------------------------------------
+const getOrderById = catchAsync(async (req, res) => {
+    const user = (req as any).user;
+    const platformId = (req as any).platformId;
+    const { id } = req.params;
+
+    const result = await OrderServices.getOrderById(id, user, platformId);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Order fetched successfully",
+        data: result,
+    });
+});
+
 export const OrderControllers = {
     submitOrder,
     getOrders,
+    getMyOrders,
+    exportOrders,
+    getOrderById,
 };
 
 
