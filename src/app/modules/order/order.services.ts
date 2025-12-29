@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lte, sql } from "drizzle-orm";
 import httpStatus from "http-status";
 import { db } from "../../../db";
@@ -17,15 +16,16 @@ import {
 } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
 import { AuthUser } from "../../interface/common";
-import { sendEmail } from "../../services/email.service";
+
 import paginationMaker from "../../utils/pagination-maker";
 import queryValidator from "../../utils/query-validator";
-import { OrderItem, OrderSubmittedEmailData, SubmitOrderPayload } from "./order.interfaces";
+import { OrderItem, SubmitOrderPayload } from "./order.interfaces";
 import { calculateBlockedPeriod, getNotificationTypeForTransition, isValidTransition, orderQueryValidationConfig, orderSortableFields, validateInboundScanningComplete, validateRoleBasedTransition } from "./order.utils";
 
 // Import asset availability checker
 import { checkMultipleAssetsAvailability, getAssetAvailabilitySummary } from "../asset/assets.services";
-import { orderIdGenerator, renderOrderSubmittedEmail } from "./order.utils";
+import { NotificationType, sendNotification } from "../notification-logs/notification-logs.utils";
+import { orderIdGenerator } from "./order.utils";
 
 // ----------------------------------- SUBMIT ORDER FROM CART ---------------------------------
 const submitOrderFromCart = async (
@@ -217,26 +217,12 @@ const submitOrderFromCart = async (
 
     await db.insert(orderItems).values(itemsToInsert);
 
-    // Step 9: Prepare email notification data
+    // Step 9: Prepare return data
     const [company] = await db.select().from(companies).where(eq(companies.id, companyId));
 
-    const emailData = {
-        orderId: order.order_id,
-        companyName: company?.name || "",
-        eventStartDate: dayjs(eventStart).format("YYYY-MM-DD"),
-        eventEndDate: dayjs(eventEnd).format("YYYY-MM-DD"),
-        venueCity: venue_city,
-        totalVolume: calculatedVolume,
-        itemCount: items.length,
-        viewOrderUrl: `http://localhost:3000/orders/${order.order_id}`,
-    };
-
     // Step 10: Send email notifications
-    await sendOrderSubmittedNotifications(emailData);
-
-    await sendOrderSubmittedConfirmationToClient(
-        contact_email,
-        emailData
+    sendNotification('ORDER_SUBMITTED', order.id).catch(err =>
+        console.error(`Failed to send ORDER_SUBMITTED notification for ${order.id}`, err)
     );
 
     // Step 11: Return order details to client
@@ -249,81 +235,7 @@ const submitOrderFromCart = async (
     };
 };
 
-// ----------------------------------- HELPER: SEND ORDER SUBMITTED NOTIFICATIONS -------------
-const sendOrderSubmittedNotifications = async (data: OrderSubmittedEmailData): Promise<void> => {
-    try {
-        // Find Platform Admins (permission_template = 'PLATFORM_ADMIN' OR 'orders:receive_notifications' in permissions)
-        const platformAdmins = await db
-            .select({ email: users.email, name: users.name })
-            .from(users)
-            .where(
-                sql`(
-                    ${users.permission_template} = 'PLATFORM_ADMIN'
-                    OR 'orders:receive_notifications' = ANY(${users.permissions})
-                ) AND ${users.email} NOT LIKE '%@system.internal'`
-            );
 
-        // Find Logistics (permission_template = 'LOGISTICS_STAFF' OR 'orders:receive_notifications' in permissions)
-        const logisticsStaff = await db
-            .select({ email: users.email, name: users.name })
-            .from(users)
-            .where(
-                sql`(
-                    ${users.permission_template} = 'LOGISTICS_STAFF'
-                    OR 'orders:receive_notifications' = ANY(${users.permissions})
-                ) AND ${users.email} NOT LIKE '%@system.internal'`
-            );
-
-        // Send emails to Platform Admins
-        const platformAdminPromises = platformAdmins.map(async (admin) => {
-            const html = renderOrderSubmittedEmail("PLATFORM_ADMIN", data);
-            return sendEmail({
-                to: admin.email,
-                subject: `New Order Submitted: ${data.orderId}`,
-                html,
-            });
-        });
-
-        // Send emails to Logistics Staff
-        const logisticsStaffPromises = logisticsStaff.map(async (staff) => {
-            const html = renderOrderSubmittedEmail("LOGISTICS_STAFF", data);
-            return sendEmail({
-                to: staff.email,
-                subject: `New Order Submitted: ${data.orderId}`,
-                html,
-            });
-        });
-
-        // Send all emails concurrently
-        await Promise.all([...logisticsStaffPromises, ...platformAdminPromises]);
-
-        console.log(`Order submission notifications sent for order ${data.orderId}`);
-    } catch (error) {
-        // Log error but don't throw - email failures shouldn't block order submission
-        console.error("Error sending order submission notifications:", error);
-    }
-};
-
-// ----------------------------------- HELPER: SEND ORDER CONFIRMATION TO CLIENT --------------
-const sendOrderSubmittedConfirmationToClient = async (
-    clientEmail: string,
-    data: OrderSubmittedEmailData
-): Promise<void> => {
-    try {
-        const html = renderOrderSubmittedEmail("CLIENT_USER", data);
-
-        await sendEmail({
-            to: clientEmail,
-            subject: `Order Confirmation: ${data.orderId}`,
-            html,
-        });
-
-        console.log(`Order confirmation sent to client: ${clientEmail}`);
-    } catch (error) {
-        // Log error but don't throw - email failures shouldn't block order submission
-        console.error("Error sending order confirmation to client:", error);
-    }
-};
 
 // ----------------------------------- GET ORDERS ---------------------------------------------
 const getOrders = async (query: Record<string, any>, user: AuthUser, platformId: string) => {
@@ -933,10 +845,13 @@ const progressOrderStatus = async (
         .where(eq(orders.id, orderId));
 
     // Step 9: Trigger notification if applicable (asynchronously, don't block response)
+    // Step 9: Trigger notification if applicable (asynchronously, don't block response)
     const notificationType = getNotificationTypeForTransition(currentStatus, new_status);
     if (notificationType) {
-        // TODO: Send notification asynchronously
-        console.log(`📧 Notification type: ${notificationType} for order ${order.order_id}`);
+        sendNotification(notificationType as NotificationType, orderId).catch(error => {
+            console.error(`Failed to send notification ${notificationType} for order ${orderId}:`, error);
+        });
+        console.log(`📧 Notification triggered: ${notificationType} for order ${order.order_id}`);
     }
 
     return {
