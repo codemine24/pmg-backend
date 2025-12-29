@@ -1293,3 +1293,438 @@
  *     security:
  *       - BearerAuth: []
  */
+
+/**
+ * @swagger
+ * /api/client/v1/order/{id}/status:
+ *   patch:
+ *     tags:
+ *       - Order Management
+ *     summary: Progress order status
+ *     description: |
+ *       Progresses an order to the next state in its lifecycle with validation and status history logging.
+ *       
+ *       **State Transition Flow:**
+ *       ```
+ *       DRAFT → SUBMITTED → PRICING_REVIEW → QUOTED → CONFIRMED → IN_PREPARATION 
+ *       → READY_FOR_DELIVERY → IN_TRANSIT → DELIVERED → IN_USE → AWAITING_RETURN → CLOSED
+ *       ```
+ *       
+ *       **Role-Based Permissions:**
+ *       - **ADMIN**: Can force any valid state transition
+ *       - **CLIENT**: Can only approve/decline quotes
+ *         - `QUOTED → CONFIRMED` (approve quote)
+ *         - `QUOTED → DECLINED` (decline quote)
+ *       - **LOGISTICS**: Can progress fulfillment stages
+ *         - `CONFIRMED → IN_PREPARATION`
+ *         - `IN_PREPARATION → READY_FOR_DELIVERY`
+ *         - `READY_FOR_DELIVERY → IN_TRANSIT`
+ *         - `IN_TRANSIT → DELIVERED`
+ *         - `AWAITING_RETURN → CLOSED`
+ *       
+ *       **Special Transition Logic:**
+ *       - **CONFIRMED**: Automatically reserves assets by creating entries in asset_bookings table
+ *       - **CLOSED**: Validates that all items have been scanned in (INBOUND) before releasing assets
+ *       
+ *       **Side Effects:**
+ *       - Creates entry in `order_status_history` table with user ID, timestamp, and optional notes
+ *       - Triggers notification based on transition type (asynchronous)
+ *       - Updates `updated_at` timestamp
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Order ID (UUID)
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - new_status
+ *             properties:
+ *               new_status:
+ *                 type: string
+ *                 enum: [DRAFT, SUBMITTED, PRICING_REVIEW, PENDING_APPROVAL, QUOTED, DECLINED, CONFIRMED, IN_PREPARATION, READY_FOR_DELIVERY, IN_TRANSIT, DELIVERED, IN_USE, AWAITING_RETURN, CLOSED]
+ *                 description: The new status to transition to
+ *                 example: "CONFIRMED"
+ *               notes:
+ *                 type: string
+ *                 description: Optional notes about the status change
+ *                 example: "Client approved quote via email"
+ *           examples:
+ *             approveQuote:
+ *               summary: Client approves quote
+ *               value:
+ *                 new_status: "CONFIRMED"
+ *                 notes: "Client approved quote via email"
+ *             declineQuote:
+ *               summary: Client declines quote
+ *               value:
+ *                 new_status: "DECLINED"
+ *                 notes: "Client requested different pricing"
+ *             startPreparation:
+ *               summary: Logistics starts preparation
+ *               value:
+ *                 new_status: "IN_PREPARATION"
+ *             closeOrder:
+ *               summary: Logistics closes order
+ *               value:
+ *                 new_status: "CLOSED"
+ *                 notes: "All items scanned in and returned"
+ *     responses:
+ *       200:
+ *         description: Order status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Order status updated to CONFIRMED"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: Order UUID
+ *                     order_id:
+ *                       type: string
+ *                       example: "ORD-20251229-001"
+ *                       description: Human-readable order ID
+ *                     order_status:
+ *                       type: string
+ *                       example: "CONFIRMED"
+ *                       description: Updated order status
+ *                     financial_status:
+ *                       type: string
+ *                       example: "QUOTE_ACCEPTED"
+ *                       description: Current financial status
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp of the update
+ *             examples:
+ *               quoteApproved:
+ *                 summary: Quote approved successfully
+ *                 value:
+ *                   success: true
+ *                   message: "Order status updated to CONFIRMED"
+ *                   data:
+ *                     id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *                     order_id: "ORD-20251229-001"
+ *                     order_status: "CONFIRMED"
+ *                     financial_status: "QUOTE_ACCEPTED"
+ *                     updated_at: "2025-12-29T14:35:00Z"
+ *       400:
+ *         description: Bad Request - Invalid state transition or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidTransition:
+ *                 summary: Invalid state transition
+ *                 value:
+ *                   success: false
+ *                   message: "Invalid state transition from DELIVERED to SUBMITTED"
+ *               assetReservationFailed:
+ *                 summary: Cannot reserve assets
+ *                 value:
+ *                   success: false
+ *                   message: "Cannot confirm order: No items found in order"
+ *               incompleteScanningInbound:
+ *                 summary: Inbound scanning not complete
+ *                 value:
+ *                   success: false
+ *                   message: "Cannot close order: Inbound scanning is not complete. All items must be scanned in before closing the order."
+ *               missingStatus:
+ *                 summary: Missing new_status field
+ *                 value:
+ *                   success: false
+ *                   message: "new_status is required"
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       403:
+ *         description: Forbidden - Insufficient permissions for this transition
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               noPermission:
+ *                 summary: User doesn't have permission for this transition
+ *                 value:
+ *                   success: false
+ *                   message: "You do not have permission to transition from CONFIRMED to IN_PREPARATION"
+ *               noAccess:
+ *                 summary: User doesn't have access to this order
+ *                 value:
+ *                   success: false
+ *          
+
+/**
+ * @swagger
+ * /api/client/v1/order/{id}/status:
+ *   patch:
+ *     tags:
+ *       - Order Management
+ *     summary: Progress order status
+ *     description: |
+ *       Progresses an order to the next state in its lifecycle with validation and status history logging.
+ *       
+ *       **State Transition Flow:**
+ *       ```
+ *       DRAFT → SUBMITTED → PRICING_REVIEW → QUOTED → CONFIRMED → IN_PREPARATION 
+ *       → READY_FOR_DELIVERY → IN_TRANSIT → DELIVERED → IN_USE → AWAITING_RETURN → CLOSED
+ *       ```
+ *       
+ *       **Role-Based Permissions:**
+ *       - **ADMIN**: Can force any valid state transition
+ *       - **CLIENT**: Can only approve/decline quotes
+ *         - `QUOTED → CONFIRMED` (approve quote)
+ *         - `QUOTED → DECLINED` (decline quote)
+ *       - **LOGISTICS**: Can progress fulfillment stages
+ *         - `CONFIRMED → IN_PREPARATION`
+ *         - `IN_PREPARATION → READY_FOR_DELIVERY`
+ *         - `READY_FOR_DELIVERY → IN_TRANSIT`
+ *         - `IN_TRANSIT → DELIVERED`
+ *         - `AWAITING_RETURN → CLOSED`
+ *       
+ *       **Special Transition Logic:**
+ *       - **CONFIRMED**: Automatically reserves assets by creating entries in asset_bookings table
+ *       - **CLOSED**: Validates that all items have been scanned in (INBOUND) before releasing assets
+ *       
+ *       **Side Effects:**
+ *       - Creates entry in `order_status_history` table with user ID, timestamp, and optional notes
+ *       - Triggers notification based on transition type (asynchronous)
+ *       - Updates `updated_at` timestamp
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Order ID (UUID)
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - new_status
+ *             properties:
+ *               new_status:
+ *                 type: string
+ *                 enum: [DRAFT, SUBMITTED, PRICING_REVIEW, PENDING_APPROVAL, QUOTED, DECLINED, CONFIRMED, IN_PREPARATION, READY_FOR_DELIVERY, IN_TRANSIT, DELIVERED, IN_USE, AWAITING_RETURN, CLOSED]
+ *                 description: The new status to transition to
+ *                 example: "CONFIRMED"
+ *               notes:
+ *                 type: string
+ *                 description: Optional notes about the status change
+ *                 example: "Client approved quote via email"
+ *           examples:
+ *             approveQuote:
+ *               summary: Client approves quote
+ *               value:
+ *                 new_status: "CONFIRMED"
+ *                 notes: "Client approved quote via email"
+ *             declineQuote:
+ *               summary: Client declines quote
+ *               value:
+ *                 new_status: "DECLINED"
+ *                 notes: "Client requested different pricing"
+ *             startPreparation:
+ *               summary: Logistics starts preparation
+ *               value:
+ *                 new_status: "IN_PREPARATION"
+ *             closeOrder:
+ *               summary: Logistics closes order
+ *               value:
+ *                 new_status: "CLOSED"
+ *                 notes: "All items scanned in and returned"
+ *     responses:
+ *       200:
+ *         description: Order status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Order status updated to CONFIRMED"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: Order UUID
+ *                     order_id:
+ *                       type: string
+ *                       example: "ORD-20251229-001"
+ *                       description: Human-readable order ID
+ *                     order_status:
+ *                       type: string
+ *                       example: "CONFIRMED"
+ *                       description: Updated order status
+ *                     financial_status:
+ *                       type: string
+ *                       example: "QUOTE_ACCEPTED"
+ *                       description: Current financial status
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp of the update
+ *             examples:
+ *               quoteApproved:
+ *                 summary: Quote approved successfully
+ *                 value:
+ *                   success: true
+ *                   message: "Order status updated to CONFIRMED"
+ *                   data:
+ *                     id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *                     order_id: "ORD-20251229-001"
+ *                     order_status: "CONFIRMED"
+ *                     financial_status: "QUOTE_ACCEPTED"
+ *                     updated_at: "2025-12-29T14:35:00Z"
+ *       400:
+ *         description: Bad Request - Invalid state transition or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidTransition:
+ *                 summary: Invalid state transition
+ *                 value:
+ *                   success: false
+ *                   message: "Invalid state transition from DELIVERED to SUBMITTED"
+ *               assetReservationFailed:
+ *                 summary: Cannot reserve assets
+ *                 value:
+ *                   success: false
+ *                   message: "Cannot confirm order: No items found in order"
+ *               incompleteScanningInbound:
+ *                 summary: Inbound scanning not complete
+ *                 value:
+ *                   success: false
+ *                   message: "Cannot close order: Inbound scanning is not complete. All items must be scanned in before closing the order."
+ *               missingStatus:
+ *                 summary: Missing new_status field
+ *                 value:
+ *                   success: false
+ *                   message: "new_status is required"
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized"
+ *       403:
+ *         description: Forbidden - Insufficient permissions for this transition
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               noPermission:
+ *                 summary: User doesn't have permission for this transition
+ *                 value:
+ *                   success: false
+ *                   message: "You do not have permission to transition from CONFIRMED to IN_PREPARATION"
+ *               noAccess:
+ *                 summary: User doesn't have access to this order
+ *                 value:
+ *                   success: false
+ *                   message: "You do not have access to this order"
+ *       404:
+ *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Order not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to progress order status"
+ *     security:
+ *       - BearerAuth: []
+ */

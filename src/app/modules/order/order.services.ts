@@ -19,11 +19,18 @@ import { sendEmail } from "../../services/email.service";
 import paginationMaker from "../../utils/pagination-maker";
 import queryValidator from "../../utils/query-validator";
 import { OrderItem, OrderSubmittedEmailData, SubmitOrderPayload } from "./order.interfaces";
-import { orderQueryValidationConfig, orderSortableFields } from "./order.utils";
+import { isValidTransition, orderQueryValidationConfig, orderSortableFields, validateRoleBasedTransition } from "./order.utils";
 
 // Import asset availability checker
 import { checkMultipleAssetsAvailability } from "../asset/assets.services";
 import { orderIdGenerator, renderOrderSubmittedEmail } from "./order.utils";
+// Import helper functions
+import {
+    createStatusHistoryEntry,
+    getNotificationTypeForTransition,
+    releaseAssetsForOrder,
+    validateInboundScanningComplete
+} from './order.helpers';
 
 // ----------------------------------- SUBMIT ORDER FROM CART ---------------------------------
 const submitOrderFromCart = async (
@@ -798,6 +805,138 @@ const getOrderScanEvents = async (orderId: string, platformId: string) => {
     return formattedResult;
 };
 
+// ----------------------------------- PROGRESS ORDER STATUS ----------------------------------
+const progressOrderStatus = async (
+    orderId: string,
+    payload: { new_status: string; notes?: string },
+    user: AuthUser,
+    platformId: string
+) => {
+    const { new_status, notes } = payload;
+
+    // Step 1: Get order with company details
+    const result = await db
+        .select({
+            order: orders,
+            company: {
+                id: companies.id,
+                name: companies.name,
+            },
+        })
+        .from(orders)
+        .leftJoin(companies, eq(orders.company_id, companies.id))
+        .where(and(
+            eq(orders.id, orderId),
+            eq(orders.platform_id, platformId)
+        ))
+        .limit(1);
+
+    if (result.length === 0) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, "Order not found");
+    }
+
+    const orderData = result[0];
+    const order = orderData.order;
+
+    // Step 2: Check company access for CLIENT users
+    if (user.role === 'CLIENT') {
+        if (user.company_id !== order.company_id) {
+            throw new CustomizedError(
+                httpStatus.FORBIDDEN,
+                "You do not have access to this order"
+            );
+        }
+    }
+
+    // Step 3: Validate state transition
+    const currentStatus = order.order_status;
+
+    if (!isValidTransition(currentStatus, new_status)) {
+        throw new CustomizedError(
+            httpStatus.BAD_REQUEST,
+            `Invalid state transition from ${currentStatus} to ${new_status}`
+        );
+    }
+
+    // Step 4: Check role-based transition permissions
+    const hasPermission = validateRoleBasedTransition(user, currentStatus, new_status);
+    if (!hasPermission) {
+        throw new CustomizedError(
+            httpStatus.FORBIDDEN,
+            `You do not have permission to transition from ${currentStatus} to ${new_status}`
+        );
+    }
+
+    // Step 5: Handle special side effects based on transitions
+    if (new_status === 'CONFIRMED') {
+        if (!order.event_start_date || !order.event_end_date) {
+            throw new Error('Order must have event dates')
+        }
+
+        // Create booking for each item
+        for (const item of order.items) {
+            const refurbDays = item.asset.refurbDaysEstimate || 0
+
+            await createBooking(
+                item.asset.id,
+                orderId,
+                item.quantity,
+                order.event_start_date,
+                order.event_end_date,
+                refurbDays
+            )
+        }
+    }
+
+    if (new_status === 'CLOSED') {
+        // Validate that all items have been scanned in (inbound)
+        const allItemsScanned = await validateInboundScanningComplete(orderId);
+
+        if (!allItemsScanned) {
+            throw new CustomizedError(
+                httpStatus.BAD_REQUEST,
+                'Cannot close order: Inbound scanning is not complete. All items must be scanned in before closing the order.'
+            );
+        }
+
+        // Release assets
+        await releaseAssetsForOrder(orderId, platformId);
+    }
+
+    // Step 6: Update order status
+    await db
+        .update(orders)
+        .set({
+            order_status: new_status as any,
+            updated_at: new Date(),
+        })
+        .where(eq(orders.id, orderId));
+
+    // Step 7: Create status history entry
+    await createStatusHistoryEntry(orderId, new_status, user.id, platformId, notes);
+
+    // Step 8: Get updated order
+    const [updatedOrder] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderId));
+
+    // Step 9: Trigger notification if applicable (asynchronously, don't block response)
+    const notificationType = getNotificationTypeForTransition(currentStatus, new_status);
+    if (notificationType) {
+        // TODO: Send notification asynchronously
+        console.log(`📧 Notification type: ${notificationType} for order ${order.order_id}`);
+    }
+
+    return {
+        id: updatedOrder.id,
+        order_id: updatedOrder.order_id,
+        order_status: updatedOrder.order_status,
+        financial_status: updatedOrder.financial_status,
+        updated_at: updatedOrder.updated_at,
+    };
+};
+
 export const OrderServices = {
     submitOrderFromCart,
     getOrders,
@@ -805,4 +944,6 @@ export const OrderServices = {
     getOrderById,
     updateJobNumber,
     getOrderScanEvents,
+    progressOrderStatus,
 };
+

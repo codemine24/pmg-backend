@@ -42,7 +42,15 @@ const updateJobNumberSchema = z.object({
     }),
 });
 
+const progressStatusSchema = z.object({
+    body: z.object({
+        new_status: z.string().min(1, "new_status is required"),
+        notes: z.string().optional(),
+    }),
+});
+
 export const orderSchemas = {
     submitOrderSchema,
     updateJobNumberSchema,
+    progressStatusSchema,
 };

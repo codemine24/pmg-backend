@@ -2,6 +2,7 @@ import { desc, sql } from "drizzle-orm";
 import { db } from "../../../db";
 import { financialStatusEnum, orders, orderStatusEnum } from "../../../db/schema";
 import { sortOrderType } from "../../constants/common";
+import { AuthUser } from "../../interface/common";
 import { OrderSubmittedEmailData, RecipientRole } from "./order.interfaces";
 
 // Sortable fields for order queries
@@ -167,3 +168,68 @@ export const renderOrderSubmittedEmail = (
 </body>
 	`.trim();
 };
+
+// ----------------------------------- STATUS TRANSITIONS -------------------------------------
+export const VALID_STATE_TRANSITIONS: Record<string, string[]> = {
+	DRAFT: ['SUBMITTED'],
+	SUBMITTED: ['PRICING_REVIEW'],
+	PRICING_REVIEW: ['QUOTED', 'PENDING_APPROVAL'],
+	PENDING_APPROVAL: ['QUOTED'],
+	QUOTED: ['CONFIRMED', 'DECLINED'],
+	DECLINED: [],
+	CONFIRMED: ['IN_PREPARATION'],
+	IN_PREPARATION: ['READY_FOR_DELIVERY'],
+	READY_FOR_DELIVERY: ['IN_TRANSIT'],
+	IN_TRANSIT: ['DELIVERED'],
+	DELIVERED: ['IN_USE'],
+	IN_USE: ['AWAITING_RETURN'],
+	AWAITING_RETURN: ['CLOSED'],
+	CLOSED: [],
+};
+
+export function isValidTransition(fromStatus: string, toStatus: string): boolean {
+	const allowedTransitions = VALID_STATE_TRANSITIONS[fromStatus];
+	if (!allowedTransitions) {
+		return false;
+	}
+	return allowedTransitions.includes(toStatus);
+}
+
+// ----------------------------------- VALIDATE ROLE-BASED TRANSITION --------------------------
+export function validateRoleBasedTransition(
+	user: AuthUser,
+	fromStatus: string,
+	toStatus: string
+): boolean {
+	// ADMIN can force any valid transition
+	if (user.role === 'ADMIN') {
+		return true;
+	}
+
+	// CLIENT can only approve/decline quotes
+	if (user.role === 'CLIENT') {
+		if (
+			fromStatus === 'QUOTED' &&
+			(toStatus === 'CONFIRMED' || toStatus === 'DECLINED')
+		) {
+			return true;
+		}
+		return false;
+	}
+
+	// LOGISTICS can progress fulfillment stages
+	if (user.role === 'LOGISTICS') {
+		const allowedLogisticsTransitions = [
+			'CONFIRMED->IN_PREPARATION',
+			'IN_PREPARATION->READY_FOR_DELIVERY',
+			'READY_FOR_DELIVERY->IN_TRANSIT',
+			'IN_TRANSIT->DELIVERED',
+			'AWAITING_RETURN->CLOSED',
+		];
+
+		const transitionKey = `${fromStatus}->${toStatus}`;
+		return allowedLogisticsTransitions.includes(transitionKey);
+	}
+
+	return false;
+}
