@@ -39,6 +39,23 @@ router.get(
     OrderControllers.getOrderById
 );
 
+// Update job number
+router.patch(
+    "/:id/job-number",
+    platformValidator,
+    auth("ADMIN", "LOGISTICS"),
+    payloadValidator(orderSchemas.updateJobNumberSchema),
+    OrderControllers.updateJobNumber
+);
+
+// Get order scan events
+router.get(
+    "/:orderId/scan-events",
+    platformValidator,
+    auth("ADMIN", "LOGISTICS"),
+    OrderControllers.getOrderScanEvents
+);
+
 // Submit order
 router.post(
     "/submit-from-cart",

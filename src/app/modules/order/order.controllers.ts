@@ -156,12 +156,45 @@ const getOrderById = catchAsync(async (req, res) => {
     });
 });
 
+// ----------------------------------- UPDATE JOB NUMBER ----------------------------------
+const updateJobNumber = catchAsync(async (req, res) => {
+    const platformId = (req as any).platformId;
+    const { id } = req.params;
+    const { job_number } = req.body;
+
+    const result = await OrderServices.updateJobNumber(id, job_number, platformId);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Job number updated successfully",
+        data: result,
+    });
+});
+
+// ----------------------------------- GET ORDER SCAN EVENTS ------------------------------
+const getOrderScanEvents = catchAsync(async (req, res) => {
+    const platformId = (req as any).platformId;
+    const { orderId } = req.params;
+
+    const result = await OrderServices.getOrderScanEvents(orderId, platformId);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Scan events fetched successfully",
+        data: result,
+    });
+});
+
 export const OrderControllers = {
     submitOrder,
     getOrders,
     getMyOrders,
     exportOrders,
     getOrderById,
+    updateJobNumber,
+    getOrderScanEvents,
 };
 
 

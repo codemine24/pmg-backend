@@ -747,6 +747,248 @@
 
 /**
  * @swagger
+ * /api/client/v1/order/{id}/job-number:
+ *   patch:
+ *     tags:
+ *       - Order Management
+ *     summary: Update order job number (ADMIN/LOGISTICS only)
+ *     description: |
+ *       Updates the job number for a specific order.
+ *       This endpoint is restricted to ADMIN and LOGISTICS users only.
+ *       
+ *       **Validation Rules:**
+ *       - Job number is required (cannot be null or empty)
+ *       - Must be alphanumeric (letters, numbers, hyphens, underscores only)
+ *       - Maximum 100 characters
+ *       
+ *       **Access Control:**
+ *       - ADMIN and LOGISTICS users can update job numbers
+ *       - CLIENT users will receive a 403 Forbidden error
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Order ID (UUID)
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - job_number
+ *             properties:
+ *               job_number:
+ *                 type: string
+ *                 maxLength: 100
+ *                 pattern: '^[a-zA-Z0-9\-_]+$'
+ *                 description: Job number (alphanumeric, hyphens, underscores only)
+ *                 example: "JOB-2025-001"
+ *           examples:
+ *             updateJobNumber:
+ *               summary: Update job number
+ *               value:
+ *                 job_number: "JOB-2025-001"
+ *     responses:
+ *       200:
+ *         description: Job number updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Job number updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     order_id:
+ *                       type: string
+ *                       example: "ORD-20251227-001"
+ *                     job_number:
+ *                       type: string
+ *                       example: "JOB-2025-001"
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Bad Request - Invalid job number format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     - "Job number must be alphanumeric (letters, numbers, hyphens, underscores only)"
+ *                     - "Job number must be at most 100 characters"
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *       403:
+ *         description: Forbidden - Only ADMIN and LOGISTICS users can update job numbers
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Internal server error
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/client/v1/order/{orderId}/scan-events:
+ *   get:
+ *     tags:
+ *       - Order Management
+ *     summary: Get order scan events (ADMIN/LOGISTICS only)
+ *     description: |
+ *       Retrieves all scan events for a specific order including:
+ *       - Complete scan event data
+ *       - Asset details (name, QR code, tracking method)
+ *       - Scanned by user information
+ *       - Order information
+ *       
+ *       **Access Control:**
+ *       - Only ADMIN and LOGISTICS users can access scan events
+ *       - CLIENT users will receive a 403 Forbidden error
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: orderId
+ *         in: path
+ *         required: true
+ *         description: Order ID (UUID)
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *     responses:
+ *       200:
+ *         description: Scan events fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Scan events fetched successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       platform_id:
+ *                         type: string
+ *                         format: uuid
+ *                       order_id:
+ *                         type: string
+ *                         format: uuid
+ *                       asset_id:
+ *                         type: string
+ *                         format: uuid
+ *                       scan_type:
+ *                         type: string
+ *                         enum: [IN, OUT]
+ *                         description: Type of scan (IN for delivery, OUT for pickup)
+ *                       quantity:
+ *                         type: integer
+ *                         description: Quantity scanned
+ *                       condition:
+ *                         type: string
+ *                         enum: [GREEN, ORANGE, RED]
+ *                         description: Asset condition at scan time
+ *                       notes:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Additional notes about the scan
+ *                       photos:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         description: URLs of photos taken during scan
+ *                       discrepancy_reason:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Reason for any discrepancy found
+ *                       scanned_by:
+ *                         type: string
+ *                         format: uuid
+ *                         description: User ID who performed the scan
+ *                       scanned_at:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Timestamp when scan was performed
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                       asset:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                           qr_code:
+ *                             type: string
+ *                           tracking_method:
+ *                             type: string
+ *                             enum: [INDIVIDUAL, BATCH]
+ *                       scanned_by_user:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                       order:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           order_id:
+ *                             type: string
+ *                             example: "ORD-20251227-001"
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *       403:
+ *         description: Forbidden - Only ADMIN and LOGISTICS users can access scan events
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Internal server error
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
  * /api/client/v1/order/submit-from-cart:
  *   post:
  *     tags:
