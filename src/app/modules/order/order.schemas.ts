@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { orderStatusEnum } from "../../../db/schema";
+import { enumMessageGenerator } from "../../utils/helper";
 
 export const orderItemSchema = z.object({
     asset_id: z.uuid("Invalid asset ID"),
@@ -44,9 +46,9 @@ const updateJobNumberSchema = z.object({
 
 const progressStatusSchema = z.object({
     body: z.object({
-        new_status: z.string().min(1, "new_status is required"),
+        new_status: z.enum(orderStatusEnum.enumValues, enumMessageGenerator('New status', orderStatusEnum.enumValues)),
         notes: z.string().optional(),
-    }),
+    }).strict(),
 });
 
 export const orderSchemas = {

@@ -11,17 +11,18 @@ const sendNotification = async (
     order: any,
     overrideRecipients?: Partial<NotificationRecipients>
 ) => {
+    // Step 1: Determine recipients (use override or fetch based on notification type)
     const recipients =
         overrideRecipients ||
         (await getRecipientsForNotification(notificationType, order));
 
-    // Build notification data
+    // Step 2: Build notification data from order details
     const data = await buildNotificationData(order);
 
-    // Get email template
+    // Step 3: Get email template (subject and HTML content)
     const { subject, html } = await getEmailTemplate(notificationType, data)
 
-    // Create notification log entry (QUEUED status)
+    // Step 4: Create notification log entry with QUEUED status
     const [logEntry] = await db
         .insert(notificationLogs)
         .values({
@@ -34,7 +35,7 @@ const sendNotification = async (
         })
         .returning()
 
-    // Send email
+    // Step 5: Validate recipients exist
     if (!recipients.to) {
         console.log(
             `   ✖ No recipients found for notification type: ${notificationType}`
@@ -42,6 +43,7 @@ const sendNotification = async (
         return
     }
 
+    // Step 6: Send email to all primary recipients
     for (const toEmail of recipients.to) {
         await sendEmailWithLogging(
             toEmail,
@@ -50,6 +52,7 @@ const sendNotification = async (
         )
     }
 
+    // Step 7: Update notification log status to SENT
     await db
         .update(notificationLogs)
         .set({
@@ -58,6 +61,7 @@ const sendNotification = async (
         })
         .where(eq(notificationLogs.id, logEntry.id))
 
+    // Step 8: Send CC emails if any exist
     if (recipients.cc && recipients.cc.length > 0) {
         for (const ccEmail of recipients.cc) {
             const ccMessageId = await sendEmailWithLogging(
@@ -71,8 +75,9 @@ const sendNotification = async (
         }
     }
 
+    // Step 9: Log successful notification completion
     console.log(
-        `✅ Notification sent: ${notificationType} for order ${order.orderId} (Total: ${recipients.to.length} primary, ${recipients.cc?.length || 0} CC)`
+        `✅ Notification sent: ${notificationType} for order ${order.order_id} (Total: ${recipients.to.length} primary, ${recipients.cc?.length || 0} CC)`
     )
 };
 
