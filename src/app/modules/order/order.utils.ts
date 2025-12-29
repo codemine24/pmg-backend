@@ -300,36 +300,3 @@ export async function validateInboundScanningComplete(
 	console.log(`✅ All items scanned in for order ${orderId}`);
 	return true;
 }
-
-// ----------------------------------- GET NOTIFICATION TYPE FOR TRANSITION --------------------
-/**
- * Maps status transitions to notification types
- */
-export function getNotificationTypeForTransition(
-	fromStatus: string,
-	toStatus: string
-): string | null {
-	// Map status transitions to notification types
-	const transitionMap: Record<string, string> = {
-		'DRAFT->SUBMITTED': 'ORDER_SUBMITTED',
-		'SUBMITTED->PRICING_REVIEW': '', // No notification needed
-		'PRICING_REVIEW->QUOTED': 'QUOTE_SENT', // A2 approved standard pricing, goes direct to client
-		'PRICING_REVIEW->PENDING_APPROVAL': 'A2_ADJUSTED_PRICING', // A2 adjusted price, needs PMG review
-		'PENDING_APPROVAL->QUOTED': 'QUOTE_SENT', // PMG approved, send to client
-		'QUOTED->CONFIRMED': 'QUOTE_APPROVED', // Direct to CONFIRMED
-		'QUOTED->DECLINED': 'QUOTE_DECLINED',
-		'CONFIRMED->IN_PREPARATION': 'ORDER_CONFIRMED',
-		'IN_PREPARATION->READY_FOR_DELIVERY': 'READY_FOR_DELIVERY',
-		'READY_FOR_DELIVERY->IN_TRANSIT': 'IN_TRANSIT',
-		'IN_TRANSIT->DELIVERED': 'DELIVERED',
-		'DELIVERED->IN_USE': '', // No notification needed
-		'IN_USE->AWAITING_RETURN': '', // No notification needed (PICKUP_REMINDER sent via cron 48h before)
-		'AWAITING_RETURN->CLOSED': 'ORDER_CLOSED',
-	};
-
-	const key = `${fromStatus}->${toStatus}`;
-	const notificationType = transitionMap[key];
-
-	// Return null if empty string (no notification) or undefined (not in map)
-	return notificationType && notificationType !== '' ? notificationType : null;
-}
