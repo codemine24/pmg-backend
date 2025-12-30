@@ -695,6 +695,7 @@ const getOrderById = async (orderId: string, user: AuthUser, platformId: string)
                 id: assets.id,
                 name: assets.name,
                 condition: assets.condition,
+                refurbishment_days_estimate: assets.refurb_days_estimate,
             },
             collection: {
                 id: collections.id,
