@@ -464,6 +464,127 @@
 
 /**
  * @swagger
+ * /api/client/v1/order/pricing-review:
+ *   get:
+ *     tags:
+ *       - Order Management
+ *     summary: Get orders pending pricing review (ADMIN/LOGISTICS only)
+ *     description: |
+ *       Retrieves a list of orders that are in the PRICING_REVIEW status.
+ *       Includes suggested pricing information based on volume and location.
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *       - name: page
+ *         in: query
+ *         description: Page number
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - name: limit
+ *         in: query
+ *         description: Number of items per page
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - name: search
+ *         in: query
+ *         description: Search by Order ID
+ *         schema:
+ *           type: string
+ *       - name: company_id
+ *         in: query
+ *         description: Filter by Company ID
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - name: sort_by
+ *         in: query
+ *         description: Sort field
+ *         schema:
+ *           type: string
+ *           enum: [created_at, event_start_date]
+ *           default: created_at
+ *       - name: sort_order
+ *         in: query
+ *         description: Sort order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Orders fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Pricing review orders fetched successfully"
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPage:
+ *                       type: integer
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       order_id:
+ *                         type: string
+ *                       company_name:
+ *                         type: string
+ *                       contact_name:
+ *                         type: string
+ *                       event_start_date:
+ *                         type: string
+ *                         format: date-time
+ *                       venue_location:
+ *                         type: object
+ *                       calculated_totals:
+ *                         type: object
+ *                       standardPricing:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           basePrice:
+ *                             type: number
+ *                             format: float
+ *                           tierInfo:
+ *                             type: object
+ *                             properties:
+ *                               country:
+ *                                 type: string
+ *                               city:
+ *                                 type: string
+ *                               volumeRange:
+ *                                 type: string
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *       403:
+ *         description: Forbidden - Insufficient permissions
+ *       500:
+ *         description: Internal server error
+ *     security:
+ *       - BearerAuth: []
+ */
+
+/**
+ * @swagger
  * /api/client/v1/order/{id}:
  *   get:
  *     tags:
