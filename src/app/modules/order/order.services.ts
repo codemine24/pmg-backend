@@ -664,7 +664,7 @@ const getOrderById = async (orderId: string, user: AuthUser, platformId: string)
         .leftJoin(brands, eq(orders.brand_id, brands.id))
         .leftJoin(users, eq(orders.user_id, users.id))
         .where(and(
-            eq(orders.id, orderId),
+            eq(orders.order_id, orderId),
             eq(orders.platform_id, platformId)
         ))
         .limit(1);
@@ -699,7 +699,7 @@ const getOrderById = async (orderId: string, user: AuthUser, platformId: string)
         .from(orderItems)
         .leftJoin(assets, eq(orderItems.asset_id, assets.id))
         .leftJoin(collections, eq(orderItems.from_collection, collections.id))
-        .where(eq(orderItems.order_id, orderId));
+        .where(eq(orderItems.order_id, orderData.order.id));
 
     return {
         ...orderData.order,
@@ -754,7 +754,7 @@ const getOrderScanEvents = async (orderId: string, platformId: string) => {
         .select()
         .from(orders)
         .where(and(
-            eq(orders.id, orderId),
+            eq(orders.order_id, orderId),
             eq(orders.platform_id, platformId)
         ));
 
@@ -780,7 +780,7 @@ const getOrderScanEvents = async (orderId: string, platformId: string) => {
         .from(scanEvents)
         .leftJoin(assets, eq(scanEvents.asset_id, assets.id))
         .leftJoin(users, eq(scanEvents.scanned_by, users.id))
-        .where(eq(scanEvents.order_id, orderId))
+        .where(eq(scanEvents.order_id, order.id))
         .orderBy(desc(scanEvents.scanned_at));
 
     // Step 4: Format results
