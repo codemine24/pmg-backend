@@ -994,6 +994,102 @@ export async function createBooking(
     })
 }
 
+
+// ----------------------------------- GET CLIENT DASHBOARD SUMMARY ----------------------------
+const getClientDashboardSummary = async (companyId: string, platformId: string) => {
+    // Get today's date for upcoming events filter
+    const today = new Date().toISOString().split('T')[0];
+
+    // Base condition for all queries
+    const baseCondition = and(
+        eq(orders.company_id, companyId),
+        eq(orders.platform_id, platformId),
+        isNull(orders.deleted_at)
+    );
+
+    // Count active orders (in progress statuses)
+    const activeOrderStatuses = [
+        'CONFIRMED',
+        'IN_PREPARATION',
+        'READY_FOR_DELIVERY',
+        'IN_TRANSIT',
+        'DELIVERED',
+        'IN_USE',
+        'AWAITING_RETURN',
+    ] as const;
+    const activeOrders = await db
+        .select()
+        .from(orders)
+        .where(
+            and(baseCondition, inArray(orders.order_status, activeOrderStatuses))
+        );
+
+    // Count pending quotes
+    const pendingQuotes = await db
+        .select()
+        .from(orders)
+        .where(and(baseCondition, eq(orders.order_status, 'QUOTED')));
+
+    // Count upcoming events (future events in pre-delivery statuses)
+    const upcomingEventStatuses = ['CONFIRMED', 'IN_PREPARATION'] as const;
+    const upcomingEvents = await db
+        .select()
+        .from(orders)
+        .where(
+            and(
+                baseCondition,
+                gte(orders.event_start_date, new Date(today)),
+                inArray(orders.order_status, upcomingEventStatuses)
+            )
+        );
+
+    // Count orders awaiting return
+    const awaitingReturn = await db
+        .select()
+        .from(orders)
+        .where(
+            and(baseCondition, eq(orders.order_status, 'AWAITING_RETURN'))
+        );
+
+    // Get 5 most recent orders
+    const recentOrders = await db
+        .select({
+            id: orders.id,
+            order_id: orders.order_id,
+            venue_name: orders.venue_name,
+            event_start_date: orders.event_start_date,
+            order_status: orders.order_status,
+            brand: {
+                id: brands.id,
+                name: brands.name,
+            },
+            created_at: orders.created_at,
+        })
+        .from(orders)
+        .leftJoin(brands, eq(orders.brand_id, brands.id))
+        .where(baseCondition)
+        .orderBy(desc(orders.created_at))
+        .limit(5);
+
+    return {
+        summary: {
+            active_orders: activeOrders.length,
+            pending_quotes: pendingQuotes.length,
+            upcoming_events: upcomingEvents.length,
+            awaiting_return: awaitingReturn.length,
+        },
+        recent_orders: recentOrders.map(order => ({
+            id: order.id,
+            order_id: order.order_id,
+            venue_name: order.venue_name,
+            event_start_date: order.event_start_date,
+            order_status: order.order_status,
+            brand: order.brand,
+            created_at: order.created_at,
+        })),
+    };
+};
+
 export const OrderServices = {
     submitOrderFromCart,
     getOrders,
@@ -1002,5 +1098,6 @@ export const OrderServices = {
     updateJobNumber,
     getOrderScanEvents,
     progressOrderStatus,
+    getClientDashboardSummary,
 };
 
