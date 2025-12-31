@@ -1253,7 +1253,20 @@ const getPricingReviewOrders = async (
         }
 
         return {
-            ...result,
+            id: order.id,
+            order_id: order.order_id,
+            company: {
+                id: result.company?.id,
+                name: result.company?.name,
+            },
+            contact_name: order.contact_name,
+            event_start_date: order.event_start_date,
+            venue_name: order.venue_name,
+            venue_location: order.venue_location,
+            calculated_volume: (order.calculated_totals as any)?.volume,
+            calculated_weight: (order.calculated_totals as any)?.weight,
+            status: order.order_status,
+            createdAt: order.created_at,
             standard_pricing: standardPricing,
         };
     }));
