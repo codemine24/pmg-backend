@@ -998,12 +998,22 @@
  *                           nullable: true
  *                           example: "12.500"
  *                           description: Total calculated volume in cubic meters (m³)
- *                         venue_city:
- *                           type: string
- *                           example: "Dubai"
- *                         venue_country:
- *                           type: string
- *                           example: "UAE"
+ *                         venue_location:
+ *                           type: object
+ *                           description: Venue location details (JSONB)
+ *                           properties:
+ *                             country:
+ *                               type: string
+ *                               example: "UAE"
+ *                             city:
+ *                               type: string
+ *                               example: "Dubai"
+ *                             address:
+ *                               type: string
+ *                               example: "123 Main St"
+ *                             access_notes:
+ *                               type: string
+ *                               nullable: true
  *                         company:
  *                           type: object
  *                           properties:
@@ -1047,19 +1057,24 @@
  *                     standard_pricing:
  *                       type: object
  *                       nullable: true
- *                       description: Calculated standard pricing based on matched tier (null if no tier)
+ *                       description: Calculated standard pricing based on matched tier
  *                       properties:
- *                         base_price:
+ *                         pricing_tier_id:
+ *                           type: string
+ *                           format: uuid
+ *                           nullable: true
+ *                           description: ID of the matched pricing tier
+ *                         logistics_base_price:
  *                           type: number
  *                           nullable: true
  *                           example: 5000.00
- *                           description: Base price from pricing tier (A2 base price)
- *                         pmg_margin_percent:
+ *                           description: Base price from pricing tier (logistics base price)
+ *                         platform_margin_percent:
  *                           type: number
  *                           nullable: true
  *                           example: 25.00
  *                           description: Platform margin percentage
- *                         pmg_margin_amount:
+ *                         platform_margin_amount:
  *                           type: number
  *                           nullable: true
  *                           example: 1250.00
@@ -1069,94 +1084,67 @@
  *                           nullable: true
  *                           example: 6250.00
  *                           description: Final total price (base price + platform margin)
- *                         tier_info:
- *                           type: object
- *                           nullable: true
- *                           description: Information about the matched pricing tier
- *                           properties:
- *                             country:
- *                               type: string
- *                               example: "UAE"
- *                             city:
- *                               type: string
- *                               example: "Dubai"
- *                             volume_range:
- *                               type: string
- *                               example: "0-10 m³"
- *                               description: Volume range that this tier applies to
+ *                         tier_found:
+ *                           type: boolean
+ *                           example: true
+ *                           description: Whether a matching pricing tier was found
  *                     current_pricing:
  *                       type: object
- *                       description: Current pricing details including logistics and platform pricing
+ *                       description: Current pricing details (JSONB objects from database)
  *                       properties:
- *                         logistics_base_price:
- *                           type: number
- *                           nullable: true
- *                           example: 5000.00
- *                           description: Base price set by logistics partner
- *                         logistics_adjusted_price:
- *                           type: number
- *                           nullable: true
- *                           example: 4500.00
- *                           description: Adjusted price after logistics partner review
- *                         logistics_adjustment_reason:
- *                           type: string
- *                           nullable: true
- *                           example: "Volume discount applied"
- *                           description: Reason for logistics price adjustment
- *                         logistics_adjusted_at:
- *                           type: string
- *                           format: date-time
- *                           nullable: true
- *                           description: Timestamp when logistics pricing was adjusted
- *                         logistics_adjusted_by:
+ *                         logistics_pricing:
  *                           type: object
  *                           nullable: true
- *                           description: User who adjusted logistics pricing
+ *                           description: Logistics pricing details (JSONB)
  *                           properties:
- *                             id:
+ *                             base_price:
+ *                               type: number
+ *                               example: 5000.00
+ *                             adjusted_price:
+ *                               type: number
+ *                               example: 4500.00
+ *                             adjustment_reason:
+ *                               type: string
+ *                               example: "Volume discount applied"
+ *                             adjusted_at:
+ *                               type: string
+ *                               format: date-time
+ *                             adjusted_by:
  *                               type: string
  *                               format: uuid
- *                             name:
- *                               type: string
- *                         platform_margin_percent:
- *                           type: number
- *                           nullable: true
- *                           example: 25.00
- *                           description: Platform margin percentage applied
- *                         platform_margin_amount:
- *                           type: number
- *                           nullable: true
- *                           example: 1125.00
- *                           description: Platform margin amount in currency
- *                         platform_reviewed_at:
- *                           type: string
- *                           format: date-time
- *                           nullable: true
- *                           description: Timestamp when platform reviewed pricing
- *                         platform_reviewed_by:
+ *                               description: User ID who adjusted pricing
+ *                         platform_pricing:
  *                           type: object
  *                           nullable: true
- *                           description: User who reviewed platform pricing
+ *                           description: Platform pricing details (JSONB)
  *                           properties:
- *                             id:
+ *                             margin_percent:
+ *                               type: number
+ *                               example: 25.00
+ *                             margin_amount:
+ *                               type: number
+ *                               example: 1125.00
+ *                             reviewed_at:
+ *                               type: string
+ *                               format: date-time
+ *                             reviewed_by:
  *                               type: string
  *                               format: uuid
- *                             name:
+ *                               description: User ID who reviewed pricing
+ *                             notes:
  *                               type: string
- *                         platform_review_notes:
- *                           type: string
+ *                               example: "Approved"
+ *                         final_pricing:
+ *                           type: object
  *                           nullable: true
- *                           description: Notes from platform pricing review
- *                         final_total_price:
- *                           type: number
- *                           nullable: true
- *                           example: 5625.00
- *                           description: Final total price including all adjustments and margins
- *                         quote_sent_at:
- *                           type: string
- *                           format: date-time
- *                           nullable: true
- *                           description: Timestamp when quote was sent to client
+ *                           description: Final pricing details (JSONB)
+ *                           properties:
+ *                             total_price:
+ *                               type: number
+ *                               example: 5625.00
+ *                             quote_sent_at:
+ *                               type: string
+ *                               format: date-time
  *       401:
  *         description: Unauthorized - Authentication required
  *       403:
