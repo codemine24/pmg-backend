@@ -468,10 +468,16 @@
  *   get:
  *     tags:
  *       - Order Management
- *     summary: Get orders pending pricing review (ADMIN/LOGISTICS only)
+ *     summary: Get orders pending pricing review (ADMIN only)
  *     description: |
  *       Retrieves a list of orders that are in the PRICING_REVIEW status.
- *       Includes suggested pricing information based on volume and location.
+ *       Includes suggested pricing information based on volume and location matching with pricing tiers.
+ *       
+ *       **Access Control:**
+ *       - ADMIN users only
+ *       
+ *       **Search Functionality:**
+ *       - Searches across order ID, contact name, venue name, and asset names
  *     parameters:
  *       - $ref: '#/components/parameters/PlatformHeader'
  *       - name: page
@@ -486,9 +492,9 @@
  *         schema:
  *           type: integer
  *           default: 10
- *       - name: search
+ *       - name: search_term
  *         in: query
- *         description: Search by Order ID
+ *         description: Search by Order ID, contact name, venue name, or asset name
  *         schema:
  *           type: string
  *       - name: company_id
@@ -497,12 +503,24 @@
  *         schema:
  *           type: string
  *           format: uuid
+ *       - name: date_from
+ *         in: query
+ *         description: Filter orders created from this date
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - name: date_to
+ *         in: query
+ *         description: Filter orders created until this date
+ *         schema:
+ *           type: string
+ *           format: date-time
  *       - name: sort_by
  *         in: query
  *         description: Sort field
  *         schema:
  *           type: string
- *           enum: [created_at, event_start_date]
+ *           enum: [created_at, updated_at, event_start_date, event_end_date, order_status, financial_status]
  *           default: created_at
  *       - name: sort_order
  *         in: query
@@ -513,7 +531,7 @@
  *           default: desc
  *     responses:
  *       200:
- *         description: Orders fetched successfully
+ *         description: Pricing review orders fetched successfully
  *         content:
  *           application/json:
  *             schema:
@@ -530,53 +548,56 @@
  *                   properties:
  *                     page:
  *                       type: integer
+ *                       example: 1
  *                     limit:
  *                       type: integer
+ *                       example: 10
  *                     total:
  *                       type: integer
- *                     totalPage:
- *                       type: integer
+ *                       example: 25
  *                 data:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
- *                       id:
- *                         type: string
- *                         format: uuid
- *                       order_id:
- *                         type: string
- *                       company_name:
- *                         type: string
- *                       contact_name:
- *                         type: string
- *                       event_start_date:
- *                         type: string
- *                         format: date-time
- *                       venue_location:
+ *                       order:
  *                         type: object
- *                       calculated_totals:
+ *                         description: Full order object with all fields
+ *                       company:
  *                         type: object
- *                       standardPricing:
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                             example: "Diageo"
+ *                       standard_pricing:
  *                         type: object
  *                         nullable: true
+ *                         description: Suggested pricing based on matching tier (null if no tier found)
  *                         properties:
  *                           basePrice:
  *                             type: number
  *                             format: float
+ *                             example: 5000.00
+ *                             description: Flat rate from pricing tier
  *                           tierInfo:
  *                             type: object
  *                             properties:
  *                               country:
  *                                 type: string
+ *                                 example: "UAE"
  *                               city:
  *                                 type: string
- *                               volumeRange:
+ *                                 example: "Dubai"
+ *                               volume_range:
  *                                 type: string
+ *                                 example: "0-10 m³"
  *       401:
  *         description: Unauthorized - Authentication required
  *       403:
- *         description: Forbidden - Insufficient permissions
+ *         description: Forbidden - Insufficient permissions (ADMIN only)
  *       500:
  *         description: Internal server error
  *     security:
