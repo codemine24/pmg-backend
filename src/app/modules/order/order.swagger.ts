@@ -560,11 +560,18 @@
  *                   items:
  *                     type: object
  *                     properties:
- *                       order:
- *                         type: object
- *                         description: Full order object with all fields
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         description: Order internal UUID
+ *                         example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *                       order_id:
+ *                         type: string
+ *                         description: Human-readable order ID
+ *                         example: "ORD-20251227-001"
  *                       company:
  *                         type: object
+ *                         nullable: true
  *                         properties:
  *                           id:
  *                             type: string
@@ -572,6 +579,51 @@
  *                           name:
  *                             type: string
  *                             example: "Diageo"
+ *                       contact_name:
+ *                         type: string
+ *                         example: "John Doe"
+ *                       event_start_date:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-01-15T00:00:00Z"
+ *                       venue_name:
+ *                         type: string
+ *                         example: "Dubai World Trade Centre"
+ *                       venue_location:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           country:
+ *                             type: string
+ *                             example: "UAE"
+ *                           city:
+ *                             type: string
+ *                             example: "Dubai"
+ *                           address:
+ *                             type: string
+ *                             example: "Sheikh Zayed Road, Trade Centre 1"
+ *                           access_notes:
+ *                             type: string
+ *                             nullable: true
+ *                       calculated_volume:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Total calculated volume in cubic meters (m³)
+ *                         example: "12.500"
+ *                       calculated_weight:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Total calculated weight in kilograms (kg)
+ *                         example: "450.250"
+ *                       status:
+ *                         type: string
+ *                         description: Order status (always PRICING_REVIEW for this endpoint)
+ *                         example: "PRICING_REVIEW"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Order creation timestamp
+ *                         example: "2025-12-27T10:30:00Z"
  *                       standard_pricing:
  *                         type: object
  *                         nullable: true
@@ -581,7 +633,7 @@
  *                             type: number
  *                             format: float
  *                             example: 5000.00
- *                             description: Flat rate from pricing tier
+ *                             description: Flat rate from pricing tier (NOT per-m³ multiplication)
  *                           tierInfo:
  *                             type: object
  *                             properties:
@@ -594,6 +646,7 @@
  *                               volume_range:
  *                                 type: string
  *                                 example: "0-10 m³"
+ *                                 description: Volume range that this tier applies to
  *       401:
  *         description: Unauthorized - Authentication required
  *       403:
