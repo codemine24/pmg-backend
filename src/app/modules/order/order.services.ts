@@ -62,6 +62,12 @@ const submitOrderFromCart = async (
         throw new CustomizedError(httpStatus.BAD_REQUEST, "Event end date must be on or after start date");
     }
 
+    const [company] = await db.select().from(companies).where(and(eq(companies.id, companyId), eq(companies.platform_id, platformId)));
+
+    if (!company) {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, "Company not found");
+    }
+
     // Step 2: Verify all assets exist and belong to the company
     const assetIds = items.map((item: OrderItem) => item.asset_id);
     const foundAssets = await db
@@ -211,6 +217,13 @@ const submitOrderFromCart = async (
             order_status: "PRICING_REVIEW",
             financial_status: "PENDING_QUOTE",
             tier_id: pricingTier?.id || null,
+            ...(pricingTier && { logistics_pricing: { base_price: pricingTier.base_price } }),
+            ...(pricingTier && {
+                platform_pricing: {
+                    margin_percent: company.platform_margin_percent,
+                    margin_amount: Number(pricingTier.base_price) * (Number(company.platform_margin_percent) / 100)
+                }
+            }),
         })
         .returning();
 
@@ -223,7 +236,6 @@ const submitOrderFromCart = async (
     await db.insert(orderItems).values(itemsToInsert);
 
     // Step 9: Prepare email notification data
-    const [company] = await db.select().from(companies).where(eq(companies.id, companyId));
 
     const emailData = {
         orderId: order.order_id,
@@ -1173,6 +1185,7 @@ const adjustLogisticsPricing = async (
     }
 
     // Step 3: Get base price from logistics_pricing or calculate from tier
+    const platformPricing = order.platform_pricing as any;
     const logisticsPricing = order.logistics_pricing as any;
     const basePrice = logisticsPricing?.base_price || null;
 
@@ -1190,6 +1203,10 @@ const adjustLogisticsPricing = async (
         .update(orders)
         .set({
             logistics_pricing: updatedLogisticsPricing,
+            platform_pricing: {
+                ...platformPricing,
+                margin_amount: Number(updatedLogisticsPricing.adjusted_price) * (Number(order.company.platform_margin_percent) / 100)
+            },
             order_status: 'PENDING_APPROVAL',
             updated_at: new Date(),
         })
