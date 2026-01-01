@@ -43,6 +43,7 @@ const login = async (credential: LoginCredential, platformId: string) => {
 
   const jwtPayload = {
     id: user.id,
+    name: user.name,
     email: user.email,
     role: user.role,
     company_id: user.company_id,
@@ -83,8 +84,8 @@ const getConfigByHostname = async (origin: string) => {
   const subdomain = hostname.split(".")[0];
 
   // Production environment
-  if(config.node_env === "production") {
-      // Step 1: Check if sub domain is admin or warehouse
+  if (config.node_env === "production") {
+    // Step 1: Check if sub domain is admin or warehouse
     if (subdomain === "admin" || subdomain === "warehouse") {
       const rootDomain = hostname.split(".").slice(1).join(".");
 
@@ -142,7 +143,7 @@ const getConfigByHostname = async (origin: string) => {
     }
 
     return null;
-  }else{
+  } else {
     // Check if it in platform if yes return platform if not than check in company domain and return
     const [platform] = await db
       .select({
