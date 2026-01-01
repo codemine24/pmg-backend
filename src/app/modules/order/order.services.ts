@@ -708,7 +708,9 @@ const getMyOrders = async (query: Record<string, any>, user: AuthUser, platformI
 };
 
 // ----------------------------------- GET ORDER BY ID ----------------------------------------
-const getOrderById = async (orderId: string, user: AuthUser, platformId: string) => {
+const getOrderById = async (orderId: string, user: AuthUser, platformId: string, query: Record<string, any>) => {
+    const { quote } = query;
+
     // Step 1: Check if orderId is a valid UUID
     const isUUID = uuidRegex.test(orderId);
 
@@ -760,6 +762,15 @@ const getOrderById = async (orderId: string, user: AuthUser, platformId: string)
         if (user.company_id !== orderData.order.company_id) {
             throw new CustomizedError(httpStatus.FORBIDDEN, "You don't have access to this order");
         }
+    }
+
+    if (
+        quote === 'true' &&
+        orderData.order.order_status !== 'QUOTED' &&
+        orderData.order.order_status !== 'CONFIRMED' &&
+        orderData.order.order_status !== 'DECLINED'
+    ) {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, "Order does not have a quote yet");
     }
 
     // Step 2: Fetch order items with asset details

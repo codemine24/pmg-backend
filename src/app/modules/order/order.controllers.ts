@@ -146,7 +146,7 @@ const getOrderById = catchAsync(async (req, res) => {
     const platformId = (req as any).platformId;
     const { id } = req.params;
 
-    const result = await OrderServices.getOrderById(id, user, platformId);
+    const result = await OrderServices.getOrderById(id, user, platformId, req.query);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
