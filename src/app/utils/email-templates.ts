@@ -1,6 +1,26 @@
-type AdjustPriceTemplatePayload = { order_id: string, company_name: string, adjusted_price: number, adjustment_reason: string, view_order_url: string };
+type AdjustPriceTemplatePayload = {
+    order_id: string,
+    company_name: string,
+    adjusted_price: number,
+    adjustment_reason: string,
+    view_order_url: string
+};
 
-type SubmitOrderTemplatePayload = { order_id: string, company_name: string, event_start_date: string, event_end_date: string, venue_city: string, total_volume: string, item_count: string, view_order_url: string, by_role: { greeting: string, message: string, action: string } };
+type SubmitOrderTemplatePayload = {
+    order_id: string,
+    company_name: string,
+    event_start_date: string,
+    event_end_date: string,
+    venue_city: string,
+    total_volume: string,
+    item_count: number,
+    view_order_url: string,
+    by_role: {
+        greeting: string,
+        message: string,
+        action: string
+    }
+};
 
 export const emailTemplates = {
     adjust_price: (data: AdjustPriceTemplatePayload) => (

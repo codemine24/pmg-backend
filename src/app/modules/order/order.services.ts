@@ -252,7 +252,21 @@ const submitOrderFromCart = async (
 
     const platformAdminEmails = platformAdmins.map((admin) => admin.email);
 
-    await multipleEmailSender(platformAdminEmails, `New Order Submitted: ${emailData.orderId}`, renderOrderSubmittedEmail("PLATFORM_ADMIN", emailData));
+    await multipleEmailSender(platformAdminEmails, `New Order Submitted: ${emailData.orderId}`, emailTemplates.submit_order({
+        order_id: emailData.orderId,
+        company_name: emailData.companyName,
+        event_start_date: emailData.eventStartDate,
+        event_end_date: emailData.eventEndDate,
+        venue_city: emailData.venueCity,
+        total_volume: emailData.totalVolume,
+        item_count: emailData.itemCount || 0,
+        view_order_url: emailData.viewOrderUrl,
+        by_role: {
+            greeting: "Platform Admin",
+            message: "A new order has been submitted and requires review.",
+            action: "Review this order in the admin dashboard and monitor the pricing workflow.",
+        }
+    }));
 
     // Find Logistics (permission_template = 'LOGISTICS_STAFF' OR 'orders:receive_notifications' in permissions)
     const logisticsStaff = await db
