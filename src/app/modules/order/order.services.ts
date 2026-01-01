@@ -31,6 +31,7 @@ import { NotificationType } from "../notification-logs/notification-logs.interfa
 import { NotificationLogServices } from "../notification-logs/notification-logs.services";
 import { getNotificationTypeForTransition } from "../notification-logs/notification-logs.utils";
 import { orderIdGenerator, renderOrderSubmittedEmail } from "./order.utils";
+import { uuidRegex } from "../../constants/common";
 
 // ----------------------------------- SUBMIT ORDER FROM CART ---------------------------------
 const submitOrderFromCart = async (
@@ -431,7 +432,7 @@ const getOrders = async (query: Record<string, any>, user: AuthUser, platformId:
     }
 
     // Step 3b: Optional filters
-    if (company_id) {
+    if (user.role !== 'CLIENT' && company_id) {
         conditions.push(eq(orders.company_id, company_id));
     }
 
@@ -713,7 +714,21 @@ const getMyOrders = async (query: Record<string, any>, user: AuthUser, platformI
 
 // ----------------------------------- GET ORDER BY ID ----------------------------------------
 const getOrderById = async (orderId: string, user: AuthUser, platformId: string) => {
-    // Step 1: Fetch order with relations
+    // Step 1: Check if orderId is a valid UUID
+    const isUUID = uuidRegex.test(orderId);
+
+    // Step 2: Build where condition based on input type
+    const whereCondition = isUUID
+        ? and(
+            or(eq(orders.id, orderId), eq(orders.order_id, orderId)),
+            eq(orders.platform_id, platformId)
+        )
+        : and(
+            eq(orders.order_id, orderId),
+            eq(orders.platform_id, platformId)
+        );
+
+    // Step 3: Fetch order with relations
     const result = await db
         .select({
             order: orders,
@@ -736,10 +751,7 @@ const getOrderById = async (orderId: string, user: AuthUser, platformId: string)
         .leftJoin(companies, eq(orders.company_id, companies.id))
         .leftJoin(brands, eq(orders.brand_id, brands.id))
         .leftJoin(users, eq(orders.user_id, users.id))
-        .where(and(
-            eq(orders.order_id, orderId),
-            eq(orders.platform_id, platformId)
-        ))
+        .where(whereCondition)
         .limit(1);
 
     if (result.length === 0) {
