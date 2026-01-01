@@ -1106,6 +1106,9 @@ const adjustLogisticsPricing = async (
             eq(orders.id, orderId),
             eq(orders.platform_id, platformId)
         ),
+        with: {
+            company: true,
+        },
     });
 
     if (!order) {
@@ -1154,35 +1157,21 @@ const adjustLogisticsPricing = async (
             updated_by: user.id,
         });
 
-    // Step 7: Fetch updated order with user details
-    const updatedOrder = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
-        with: {
-            company: true,
-        },
-    });
-
-    const finalLogisticsPricing = updatedOrder!.logistics_pricing as any;
-
-    const adjustedByUser = await db.query.users.findFirst({
-        where: eq(users.id, finalLogisticsPricing?.adjusted_by),
-    });
-
     return {
-        id: updatedOrder!.id,
-        order_id: updatedOrder!.order_id,
-        order_status: updatedOrder!.order_status,
-        base_price: finalLogisticsPricing?.base_price,
-        adjusted_price: finalLogisticsPricing?.adjusted_price,
-        adjustment_reason: finalLogisticsPricing?.adjustment_reason,
-        adjusted_at: finalLogisticsPricing?.adjusted_at,
+        id: order.id,
+        order_id: order.order_id,
+        order_status: 'PENDING_APPROVAL',
+        base_price: updatedLogisticsPricing.base_price,
+        adjusted_price: updatedLogisticsPricing.adjusted_price,
+        adjustment_reason: updatedLogisticsPricing.adjustment_reason,
+        adjusted_at: updatedLogisticsPricing.adjusted_at,
         adjusted_by: {
-            id: finalLogisticsPricing?.adjusted_by,
-            name: adjustedByUser?.name,
+            id: updatedLogisticsPricing.adjusted_by,
+            name: user.name,
         },
         company: {
-            id: updatedOrder!.company.id,
-            name: updatedOrder!.company.name,
+            id: order.company.id,
+            name: order.company.name,
         },
     };
 };
