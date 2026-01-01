@@ -10,5 +10,5 @@ export const multipleEmailSender = async (to: string[], subject: string, html: s
     })
 
     // Send all emails concurrently
-    await Promise.all(emailPromises)
-}
+    await Promise.all(emailPromises);
+};
