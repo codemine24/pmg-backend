@@ -22,6 +22,7 @@ export type NotificationRecipients = {
 }
 
 export type NotificationData = {
+    platformId: string
     orderId: string
     orderIdReadable: string
     companyName: string

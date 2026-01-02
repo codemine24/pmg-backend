@@ -110,6 +110,7 @@ export const buildNotificationData = async (order: any): Promise<NotificationDat
     const serverUrl = config.server_url;
 
     return {
+        platformId: order.platform_id,
         orderId: order.id,
         orderIdReadable: order.order_id,
         companyName: order.company?.name || 'Unknown Company',
@@ -125,7 +126,7 @@ export const buildNotificationData = async (order: any): Promise<NotificationDat
         finalTotalPrice: order.final_pricing?.total_price
             ? Number(order.final_pricing.total_price).toFixed(2)
             : '',
-        invoiceNumber: order.invoice_id || '',
+        invoiceNumber: order.invoiceNumber || '',
         deliveryWindow: formatTimeWindow(
             order.delivery_window?.start,
             order.delivery_window?.end

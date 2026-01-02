@@ -2076,9 +2076,9 @@ const approveQuote = async (
 
     await NotificationLogServices.sendNotification(platformId, 'QUOTE_APPROVED', order);
 
-    await invoiceGenerator(invoiceData);
+    const { invoice_id } = await invoiceGenerator(invoiceData);
 
-    await NotificationLogServices.sendNotification(platformId, 'INVOICE_GENERATED', order);
+    await NotificationLogServices.sendNotification(platformId, 'INVOICE_GENERATED', { ...order, invoiceNumber: invoice_id });
 
     return {
         id: order.id,
