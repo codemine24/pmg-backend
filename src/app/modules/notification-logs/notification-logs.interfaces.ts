@@ -35,6 +35,7 @@ export type NotificationData = {
     deliveryWindow?: string
     pickupWindow?: string
     orderUrl: string
+    serverUrl: string
     supportEmail: string
     supportPhone: string
     // Additional context fields

@@ -2045,6 +2045,7 @@ const approveQuote = async (
 
     const venueLocation = order.venue_location as any;
     const invoiceData = {
+        id: order.id,
         platform_id: order.platform_id,
         order_id: order.order_id,
         contact_name: order.contact_name,
@@ -2073,7 +2074,11 @@ const approveQuote = async (
 
     };
 
-    await invoiceGenerator(invoiceData)
+    await NotificationLogServices.sendNotification(platformId, 'QUOTE_APPROVED', order);
+
+    await invoiceGenerator(invoiceData);
+
+    await NotificationLogServices.sendNotification(platformId, 'INVOICE_GENERATED', order);
 
     return {
         id: order.id,

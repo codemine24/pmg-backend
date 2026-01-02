@@ -106,7 +106,8 @@ export const getRecipientsForNotification = async (
 
 // ----------------------------------- BUILD NOTIFICATION DATA ------------------------------------
 export const buildNotificationData = async (order: any): Promise<NotificationData> => {
-    const baseUrl = config.frontend_url || 'http://localhost:3000'
+    const clientUrl = config.client_url;
+    const serverUrl = config.server_url;
 
     return {
         orderId: order.id,
@@ -133,7 +134,8 @@ export const buildNotificationData = async (order: any): Promise<NotificationDat
             order.pickup_window?.start,
             order.pickup_window?.end
         ),
-        orderUrl: `${baseUrl}/orders/${order.order_id}`,
+        orderUrl: `${clientUrl}/orders/${order.order_id}`,
+        serverUrl: serverUrl,
         supportEmail: 'support@assetfulfillment.com',
         supportPhone: '+971 XX XXX XXXX',
         // Additional fields for enhanced templates
