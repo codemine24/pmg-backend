@@ -1238,7 +1238,7 @@ const adjustLogisticsPricing = async (
             order_id: orderId,
             status: 'PENDING_APPROVAL',
             notes: `Logistics pricing adjusted: ${payload.adjustment_reason}`,
-            updated_by: user.email,
+            updated_by: user.id,
         });
 
     // Step 7: Send notification to plaform admin
