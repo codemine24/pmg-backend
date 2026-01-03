@@ -79,11 +79,13 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
             .set({
                 invoice_pdf_url: pdfUrl,
                 updated_at: new Date(),
+                updated_by: data.user_id,
             })
             .where(and(eq(invoices.id, invoice.id), eq(invoices.platform_id, data.platform_id)))
     } else {
         await db.insert(invoices).values({
             platform_id: data.platform_id,
+            generated_by: data.user_id,
             order_id: data.id,
             invoice_id: invoiceNumber,
             invoice_pdf_url: pdfUrl,
@@ -105,6 +107,7 @@ export type HandlingTag =
 
 export type InvoicePayload = {
     id: string;
+    user_id: string;
     order_id: string;
     platform_id: string;
     contact_name: string;

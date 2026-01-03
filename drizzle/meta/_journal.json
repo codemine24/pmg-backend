@@ -64,6 +64,13 @@
       "when": 1767365466767,
       "tag": "0008_curly_shiva",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1767466295347,
+      "tag": "0009_free_longshot",
+      "breakpoints": true
     }
   ]
 }

@@ -1975,6 +1975,7 @@ const approveQuote = async (
     const venueLocation = order.venue_location as any;
     const invoiceData = {
         id: order.id,
+        user_id: user.id,
         platform_id: order.platform_id,
         order_id: order.order_id,
         contact_name: order.contact_name,
