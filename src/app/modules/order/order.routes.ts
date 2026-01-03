@@ -31,17 +31,9 @@ router.get(
     OrderControllers.exportOrders
 );
 
-// Get client dashboard summary
-router.get(
-    "/dashboard-summary",
-    platformValidator,
-    auth("CLIENT"),
-    OrderControllers.getClientDashboardSummary
-);
-
 // Get order statistics (CLIENT only)
 router.get(
-    "/statistics",
+    "/dashboard-summary",
     platformValidator,
     auth("CLIENT"),
     OrderControllers.getOrderStatistics
