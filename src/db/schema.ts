@@ -750,10 +750,10 @@ export const invoices = pgTable(
   'invoices',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    platform_id: uuid('platform')
+    platform_id: uuid('platform_id')
       .notNull()
       .references(() => platforms.id, { onDelete: 'cascade' }),
-    order_id: uuid('order')
+    order_id: uuid('order_id')
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
     invoice_id: varchar('invoice_id', { length: 50 }).notNull(),
@@ -761,6 +761,10 @@ export const invoices = pgTable(
     invoice_paid_at: timestamp('invoice_paid_at'),
     payment_method: varchar('payment_method', { length: 50 }),
     payment_reference: varchar('payment_reference', { length: 100 }),
+    generated_by: uuid('generated_by')
+      .notNull()
+      .references(() => users.id),
+    updated_by: uuid('updated_by').references(() => users.id),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').$onUpdate(() => new Date()).notNull(),
   },
@@ -775,6 +779,8 @@ export const invoicesRelations = relations(
   ({ one }) => ({
     order: one(orders, { fields: [invoices.order_id], references: [orders.id] }),
     platform: one(platforms, { fields: [invoices.platform_id], references: [platforms.id] }),
+    generated_by_user: one(users, { fields: [invoices.generated_by], references: [users.id] }),
+    updated_by_user: one(users, { fields: [invoices.updated_by], references: [users.id] }),
   })
 )
 
