@@ -1,6 +1,6 @@
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm"
 import { db } from "../../db"
-import { invoices } from "../../db/schema"
+import { invoices, orders } from "../../db/schema"
 import { renderInvoicePDF } from "./invoice-pdf"
 import { deleteFileFromS3, uploadPDFToS3 } from "../services/s3.service"
 
@@ -48,7 +48,7 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
     }
 
     // Prevent regeneration after payment confirmed
-    if (regenerate && invoice?.invoice_paid_at) {
+    if (regenerate && invoice && invoice.invoice_paid_at) {
         throw new Error(
             'Cannot regenerate invoice after payment has been confirmed'
         )
@@ -90,6 +90,13 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
             invoice_id: invoiceNumber,
             invoice_pdf_url: pdfUrl,
         })
+
+        await db.update(orders)
+            .set({
+                financial_status: 'INVOICED',
+                updated_at: new Date(),
+            })
+            .where(and(eq(orders.id, data.id), eq(orders.platform_id, data.platform_id)))
     }
 
     return {

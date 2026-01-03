@@ -120,10 +120,30 @@ const confirmPayment = catchAsync(async (req, res) => {
     });
 });
 
+// ----------------------------------- GENERATE INVOICE ---------------------------------------
+const generateInvoice = catchAsync(async (req, res) => {
+    const user = (req as any).user;
+    const platformId = (req as any).platformId;
+
+    const result = await InvoiceServices.generateInvoice(
+        platformId,
+        user,
+        req.body,
+    );
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Invoice generated successfully",
+        data: result,
+    });
+});
+
 export const InvoiceControllers = {
     getInvoiceById,
     downloadInvoice,
     downloadInvoicePDF,
     getInvoices,
     confirmPayment,
+    generateInvoice,
 };

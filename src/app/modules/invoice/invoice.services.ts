@@ -9,7 +9,8 @@ import queryValidator from "../../utils/query-validator";
 import paginationMaker from "../../utils/pagination-maker";
 import { invoiceQueryValidationConfig, invoiceSortableFields } from "./invoice.utils";
 import { uuidRegex } from "../../constants/common";
-import { ConfirmPaymentPayload } from "./invoice.interfaces";
+import { ConfirmPaymentPayload, GenerateInvoicePayload } from "./invoice.interfaces";
+import { invoiceGenerator } from "../../utils/invoice";
 
 // ----------------------------------- GET INVOICE BY ID --------------------------------------
 const getInvoiceById = async (
@@ -368,12 +369,80 @@ const confirmPayment = async (
 };
 
 // ----------------------------------- INVOICE GENERATE ---------------------------------------
-const generateInvoice = async (platformId: string, user: AuthUser, payload: any) => {
+const generateInvoice = async (platformId: string, user: AuthUser, payload: GenerateInvoicePayload) => {
+    const { order_id, regenerate } = payload;
 
+    // Step 1: Fetch order with company details
+    const order = await db.query.orders.findFirst({
+        where: and(
+            eq(orders.id, order_id),
+            eq(orders.platform_id, platformId)
+        ),
+        with: {
+            company: true,
+            items: {
+                with: {
+                    asset: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            refurb_days_estimate: true,
+                        },
+                    },
+                },
+            },
+        }
+    });
+
+    if (!order) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, "Order not found");
+    }
+
+    // Step 2: Prepare invoice data
+    const venueLocation = order.venue_location as any;
+    const invoiceData = {
+        id: order.id,
+        user_id: user.id,
+        platform_id: order.platform_id,
+        order_id: order.order_id,
+        contact_name: order.contact_name,
+        contact_email: order.contact_email,
+        contact_phone: order.contact_phone,
+        company_name: order.company.name,
+        event_start_date: order.event_start_date,
+        event_end_date: order.event_end_date,
+        venue_name: order.venue_name,
+        venue_country: venueLocation.country || 'N/A',
+        venue_city: venueLocation.city || 'N/A',
+        venue_address: venueLocation.address || 'N/A',
+        pricing: {
+            logistics_base_price: (order.logistics_pricing as any)?.base_price || 0,
+            platform_margin_percent: (order.platform_pricing as any)?.margin_percent || 0,
+            platform_margin_amount: (order.platform_pricing as any)?.margin_amount || 0,
+            final_total_price: (order.final_pricing as any)?.total_price || 0,
+            show_breakdown: false
+        },
+        items: order.items.map(item => ({
+            asset_name: item.asset.name,
+            quantity: item.quantity,
+            handling_tags: item.handling_tags as any,
+            from_collection_name: item.from_collection_name || 'N/A'
+        }))
+    };
+
+    // Step 3: Generate invoice
+    const { invoice_id, invoice_pdf_url } = await invoiceGenerator(invoiceData, regenerate);
+
+    // Step 4: Return invoice
+    return {
+        invoice_id,
+        invoice_pdf_url,
+    };
 }
 export const InvoiceServices = {
     getInvoiceById,
     downloadInvoice,
     getInvoices,
     confirmPayment,
+    generateInvoice,
 };

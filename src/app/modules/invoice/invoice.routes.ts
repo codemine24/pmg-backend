@@ -15,6 +15,15 @@ router.get(
     InvoiceControllers.getInvoices
 );
 
+// Generate invoice (ADMIN only)
+router.post(
+    "/generate",
+    platformValidator,
+    auth("ADMIN"),
+    payloadValidator(invoiceSchemas.generateInvoice),
+    InvoiceControllers.generateInvoice
+);
+
 
 // Get single invoice by ID or invoice_id
 router.get(

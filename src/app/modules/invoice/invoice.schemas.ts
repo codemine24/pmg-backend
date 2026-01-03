@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // ----------------------------------- CONFIRM PAYMENT SCHEMA ---------------------------------
-export const confirmPaymentSchema = z.object({
+export const confirmPayment = z.object({
     body: z.object({
         payment_method: z.string("Payment method should be a string").min(1, "Payment method is required").max(50, "Payment method should be less than 50 characters"),
         payment_reference: z.string("Payment reference should be a string").min(1, "Payment reference is required").max(100, "Payment reference should be less than 100 characters"),
@@ -13,6 +13,15 @@ export const confirmPaymentSchema = z.object({
     }).strict(),
 });
 
+// ----------------------------------- GENERATE INVOICE SCHEMA --------------------------------
+export const generateInvoice = z.object({
+    body: z.object({
+        order_id: z.uuid("Order ID should be a valid UUID"),
+        regenerate: z.boolean("Regenerate should be a boolean").optional().default(false),
+    }).strict(),
+});
+
 export const invoiceSchemas = {
-    confirmPayment: confirmPaymentSchema,
+    confirmPayment,
+    generateInvoice,
 };
