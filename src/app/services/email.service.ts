@@ -6,6 +6,7 @@ interface EmailOptions {
     subject: string;
     html: string;
     from?: string;
+    attachments?: Array<{ filename: string; content: any }>
 }
 
 // Create reusable transporter
@@ -24,7 +25,7 @@ const createTransporter = () => {
 
 export const sendEmail = async (options: EmailOptions): Promise<string> => {
     try {
-        const { to, subject, html, from = config.email_from } = options;
+        const { to, subject, html, from = config.email_from, attachments } = options;
 
         const transporter = createTransporter();
 
@@ -34,6 +35,7 @@ export const sendEmail = async (options: EmailOptions): Promise<string> => {
             to,
             subject,
             html,
+            attachments
         });
 
         console.log('✅ Email sent successfully:', {

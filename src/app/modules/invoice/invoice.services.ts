@@ -437,12 +437,12 @@ const generateInvoice = async (platformId: string, user: AuthUser, payload: Gene
     };
 
     // Step 3: Generate invoice
-    const { invoice_id, invoice_pdf_url } = await invoiceGenerator(invoiceData, regenerate);
+    const { invoice_id, invoice_pdf_url, pdf_buffer } = await invoiceGenerator(invoiceData, regenerate);
 
     if (invoice_id && invoice_pdf_url) {
         await sendEmail({
             to: order.contact_email,
-            subject: '',
+            subject: `Invoice ${invoice_id} for Order ${order.order_id}`,
             html: emailTemplates.send_invoice_to_client({
                 invoice_number: invoice_id,
                 order_id: order.order_id,
@@ -450,6 +450,14 @@ const generateInvoice = async (platformId: string, user: AuthUser, payload: Gene
                 final_total_price: (order.final_pricing as any)?.total_price || 0,
                 download_invoice_url: `${config.server_url}/client/v1/invoice/download-pdf/${invoice_id}?pid=${platformId}`,
             }),
+            attachments: pdf_buffer
+                ? [
+                    {
+                        filename: `${invoice_id}.pdf`,
+                        content: pdf_buffer,
+                    },
+                ]
+                : undefined,
         })
     }
 

@@ -35,7 +35,7 @@ export const invoiceNumberGenerator = async (platformId: string): Promise<string
 }
 
 // --------------------------------- INVOICE GENERATOR ----------------------------------------
-export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean = false): Promise<{ invoice_id: string; invoice_pdf_url: string; }> => {
+export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean = false): Promise<{ invoice_id: string; invoice_pdf_url: string; pdf_buffer: Buffer }> => {
 
     const [invoice] = await db.select().from(invoices).where(
         and(eq(invoices.order_id, data.id), eq(invoices.platform_id, data.platform_id))
@@ -107,6 +107,7 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
     return {
         invoice_id: invoiceNumber,
         invoice_pdf_url: pdfUrl,
+        pdf_buffer: pdfBuffer
     }
 }
 
