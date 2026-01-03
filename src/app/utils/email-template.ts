@@ -83,7 +83,7 @@ export async function getEmailTemplate(
 					<p style="margin: 8px 0; font-size: 18px; font-weight: bold; color: #111827;">Amount Due: ${data.finalTotalPrice} AED</p>
 				</div>
 				<p style="margin: 16px 0; color: #dc2626; font-weight: 600;">⚠️ Payment Required: Please process payment to proceed with fulfillment.</p>
-				<a href="${data.serverUrl}/client/v1/invoice/download-pdf/${data.invoiceNumber}?platform_id=${data.platformId}" style="display: inline-block; margin: 24px 0; padding: 12px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Download Cost Estimate PDF</a>
+				<a href="${data.serverUrl}/client/v1/invoice/download-pdf/${data.invoiceNumber}?pid=${data.platformId}" style="display: inline-block; margin: 24px 0; padding: 12px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Download Cost Estimate PDF</a>
 				<p style="margin: 16px 0; font-size: 14px; color: #6b7280;">Or view order details: <a href="${data.orderUrl}" style="color: #2563eb; text-decoration: underline;">View Order</a></p>
 			</td></tr>
 		</table>

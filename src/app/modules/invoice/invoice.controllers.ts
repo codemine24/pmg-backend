@@ -50,7 +50,7 @@ const downloadInvoice = catchAsync(async (req, res) => {
 
 // ----------------------------------- DOWNLOAD INVOICE PDF (DIRECT) --------------------------
 const downloadInvoicePDF = catchAsync(async (req, res) => {
-    const platformId = (req.query as any).platform_id;
+    const platformId = (req.query as any).pid;
     const { invoiceId } = req.params;
 
     const [invoice] = await db
@@ -120,10 +120,30 @@ const confirmPayment = catchAsync(async (req, res) => {
     });
 });
 
+// ----------------------------------- GENERATE INVOICE ---------------------------------------
+const generateInvoice = catchAsync(async (req, res) => {
+    const user = (req as any).user;
+    const platformId = (req as any).platformId;
+
+    const result = await InvoiceServices.generateInvoice(
+        platformId,
+        user,
+        req.body,
+    );
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Invoice generated successfully",
+        data: result,
+    });
+});
+
 export const InvoiceControllers = {
     getInvoiceById,
     downloadInvoice,
     downloadInvoicePDF,
     getInvoices,
     confirmPayment,
+    generateInvoice,
 };

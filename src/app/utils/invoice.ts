@@ -1,6 +1,6 @@
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm"
 import { db } from "../../db"
-import { invoices } from "../../db/schema"
+import { invoices, orders } from "../../db/schema"
 import { renderInvoicePDF } from "./invoice-pdf"
 import { deleteFileFromS3, uploadPDFToS3 } from "../services/s3.service"
 
@@ -35,7 +35,7 @@ export const invoiceNumberGenerator = async (platformId: string): Promise<string
 }
 
 // --------------------------------- INVOICE GENERATOR ----------------------------------------
-export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean = false): Promise<{ invoice_id: string; invoice_pdf_url: string; }> => {
+export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean = false): Promise<{ invoice_id: string; invoice_pdf_url: string; pdf_buffer: Buffer }> => {
 
     const [invoice] = await db.select().from(invoices).where(
         and(eq(invoices.order_id, data.id), eq(invoices.platform_id, data.platform_id))
@@ -48,7 +48,7 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
     }
 
     // Prevent regeneration after payment confirmed
-    if (regenerate && invoice?.invoice_paid_at) {
+    if (regenerate && invoice && invoice.invoice_paid_at) {
         throw new Error(
             'Cannot regenerate invoice after payment has been confirmed'
         )
@@ -72,7 +72,7 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
     const key = `invoices/${data.company_name.replace(/\s/g, '-').toLowerCase()}/${invoiceNumber}.pdf`
     const pdfUrl = await uploadPDFToS3(pdfBuffer, invoiceNumber, key)
 
-    // Save or update invoice record
+    // Save or update invoice record (wrapped in transaction)
     if (regenerate && invoice) {
         await db
             .update(invoices)
@@ -83,18 +83,31 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
             })
             .where(and(eq(invoices.id, invoice.id), eq(invoices.platform_id, data.platform_id)))
     } else {
-        await db.insert(invoices).values({
-            platform_id: data.platform_id,
-            generated_by: data.user_id,
-            order_id: data.id,
-            invoice_id: invoiceNumber,
-            invoice_pdf_url: pdfUrl,
-        })
+        // Create invoice and update order
+        await db.transaction(async (tx) => {
+            // Insert invoice
+            await tx.insert(invoices).values({
+                platform_id: data.platform_id,
+                generated_by: data.user_id,
+                order_id: data.id,
+                invoice_id: invoiceNumber,
+                invoice_pdf_url: pdfUrl,
+            });
+
+            // Update order financial status
+            await tx.update(orders)
+                .set({
+                    financial_status: 'INVOICED',
+                    updated_at: new Date(),
+                })
+                .where(and(eq(orders.id, data.id), eq(orders.platform_id, data.platform_id)));
+        });
     }
 
     return {
         invoice_id: invoiceNumber,
         invoice_pdf_url: pdfUrl,
+        pdf_buffer: pdfBuffer
     }
 }
 
