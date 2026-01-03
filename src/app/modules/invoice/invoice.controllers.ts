@@ -123,7 +123,7 @@ const confirmPayment = catchAsync(async (req, res) => {
 // ----------------------------------- GENERATE INVOICE ---------------------------------------
 const generateInvoice = catchAsync(async (req, res) => {
     const user = (req as any).user;
-    const platformId = (req as any).platformId;
+    const platformId = (req as any).pid;
 
     const result = await InvoiceServices.generateInvoice(
         platformId,

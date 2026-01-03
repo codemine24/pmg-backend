@@ -11,6 +11,9 @@ import { invoiceQueryValidationConfig, invoiceSortableFields } from "./invoice.u
 import { uuidRegex } from "../../constants/common";
 import { ConfirmPaymentPayload, GenerateInvoicePayload } from "./invoice.interfaces";
 import { invoiceGenerator } from "../../utils/invoice";
+import { sendEmail } from "../../services/email.service";
+import { emailTemplates } from "../../utils/email-templates";
+import config from "../../config";
 
 // ----------------------------------- GET INVOICE BY ID --------------------------------------
 const getInvoiceById = async (
@@ -432,6 +435,20 @@ const generateInvoice = async (platformId: string, user: AuthUser, payload: Gene
 
     // Step 3: Generate invoice
     const { invoice_id, invoice_pdf_url } = await invoiceGenerator(invoiceData, regenerate);
+
+    if (invoice_id && invoice_pdf_url) {
+        await sendEmail({
+            to: order.contact_email,
+            subject: '',
+            html: emailTemplates.send_invoice_to_client({
+                invoice_number: invoice_id,
+                order_id: order.order_id,
+                company_name: order.company?.name || 'N/A',
+                final_total_price: (order.final_pricing as any)?.total_price || 0,
+                download_invoice_url: `${config.server_url}/client/v1/invoice/download-pdf/${invoice_id}?pid=${platformId}`,
+            }),
+        })
+    }
 
     // Step 4: Return invoice
     return {

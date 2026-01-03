@@ -72,7 +72,7 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
     const key = `invoices/${data.company_name.replace(/\s/g, '-').toLowerCase()}/${invoiceNumber}.pdf`
     const pdfUrl = await uploadPDFToS3(pdfBuffer, invoiceNumber, key)
 
-    // Save or update invoice record
+    // Save or update invoice record (wrapped in transaction)
     if (regenerate && invoice) {
         await db
             .update(invoices)
@@ -83,20 +83,25 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
             })
             .where(and(eq(invoices.id, invoice.id), eq(invoices.platform_id, data.platform_id)))
     } else {
-        await db.insert(invoices).values({
-            platform_id: data.platform_id,
-            generated_by: data.user_id,
-            order_id: data.id,
-            invoice_id: invoiceNumber,
-            invoice_pdf_url: pdfUrl,
-        })
+        // Create invoice and update order
+        await db.transaction(async (tx) => {
+            // Insert invoice
+            await tx.insert(invoices).values({
+                platform_id: data.platform_id,
+                generated_by: data.user_id,
+                order_id: data.id,
+                invoice_id: invoiceNumber,
+                invoice_pdf_url: pdfUrl,
+            });
 
-        await db.update(orders)
-            .set({
-                financial_status: 'INVOICED',
-                updated_at: new Date(),
-            })
-            .where(and(eq(orders.id, data.id), eq(orders.platform_id, data.platform_id)))
+            // Update order financial status
+            await tx.update(orders)
+                .set({
+                    financial_status: 'INVOICED',
+                    updated_at: new Date(),
+                })
+                .where(and(eq(orders.id, data.id), eq(orders.platform_id, data.platform_id)));
+        });
     }
 
     return {
