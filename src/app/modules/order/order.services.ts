@@ -1154,6 +1154,7 @@ const adjustLogisticsPricing = async (
             logistics_pricing: updatedLogisticsPricing,
             platform_pricing: {
                 ...platformPricing,
+                margin_percent: order.company.platform_margin_percent,
                 margin_amount: Number(updatedLogisticsPricing.adjusted_price) * (Number(order.company.platform_margin_percent) / 100)
             },
             order_status: 'PENDING_APPROVAL',
