@@ -21,7 +21,7 @@ import { AuthUser } from "../../interface/common";
 import { sendEmail } from "../../services/email.service";
 import paginationMaker from "../../utils/pagination-maker";
 import queryValidator from "../../utils/query-validator";
-import { AdjustLogisticsPricingPayload, ApproveStandardPricingPayload, ApprovePlatformPricingPayload, OrderItem, OrderSubmittedEmailData, StandardPricing, SubmitOrderPayload, UpdateOrderTimeWindowsPayload, ApproveQuotePayload } from "./order.interfaces";
+import { AdjustLogisticsPricingPayload, ApproveStandardPricingPayload, ApprovePlatformPricingPayload, OrderItem, OrderSubmittedEmailData, StandardPricing, SubmitOrderPayload, UpdateOrderTimeWindowsPayload, ApproveQuotePayload, DeclineQuotePayload } from "./order.interfaces";
 import { calculateBlockedPeriod, isValidTransition, orderQueryValidationConfig, orderSortableFields, validateInboundScanningComplete, validateRoleBasedTransition } from "./order.utils";
 
 // Import asset availability checker
@@ -2089,6 +2089,73 @@ const approveQuote = async (
     }
 };
 
+// ----------------------------------- DECLINE QUOTE ----------------------------------------------
+const declineQuote = async (
+    orderId: string,
+    user: AuthUser,
+    platformId: string,
+    payload: DeclineQuotePayload
+) => {
+    const { decline_reason } = payload;
+
+    // Step 1: Fetch order with company details
+    const order = await db.query.orders.findFirst({
+        where: and(
+            eq(orders.id, orderId),
+            eq(orders.platform_id, platformId)
+        ),
+        with: {
+            company: true,
+        }
+    });
+
+    if (!order || user.company_id !== order.company_id) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, 'Order not found or you do not have access to this order');
+    }
+
+    // Step 2: Verify order is in QUOTED status
+    if (order.order_status !== 'QUOTED') {
+        throw new CustomizedError(
+            httpStatus.BAD_REQUEST,
+            `Order is not in QUOTED status. Current status: ${order.order_status}`
+        );
+    }
+
+    // Step 4: Update order status to DECLINED
+    await db
+        .update(orders)
+        .set({
+            order_status: 'DECLINED',
+            updated_at: new Date(),
+        })
+        .where(and(
+            eq(orders.id, orderId),
+            eq(orders.platform_id, platformId)
+        ));
+
+    // Step 5: Log status change in order_status_history
+    await db
+        .insert(orderStatusHistory)
+        .values({
+            platform_id: platformId,
+            order_id: orderId,
+            status: 'DECLINED',
+            notes: `Client declined quote: ${decline_reason}`,
+            updated_by: user.id,
+        });
+
+    // Step 6: Send decline notification (asynchronous, non-blocking)
+    await NotificationLogServices.sendNotification(platformId, 'QUOTE_DECLINED', order);
+
+    // Step 7: Return updated order details
+    return {
+        id: order.id,
+        order_id: order.order_id,
+        order_status: 'DECLINED',
+        updated_at: new Date(),
+    };
+};
+
 
 export const OrderServices = {
     submitOrderFromCart,
@@ -2107,5 +2174,7 @@ export const OrderServices = {
     approveStandardPricing,
     approvePlatformPricing,
     approveQuote,
+    declineQuote,
 };
+
 
