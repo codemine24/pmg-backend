@@ -500,10 +500,12 @@ const getOrders = async (query: Record<string, any>, user: AuthUser, platformId:
                 id: brands.id,
                 name: brands.name,
             },
+            tier: pricingTiers,
         })
         .from(orders)
         .leftJoin(companies, eq(orders.company_id, companies.id))
         .leftJoin(brands, eq(orders.brand_id, brands.id))
+        .leftJoin(pricingTiers, eq(orders.tier_id, pricingTiers.id))
         .where(and(...conditions))
         .orderBy(sortSequence === "asc" ? asc(sortField) : desc(sortField))
         .limit(limitNumber)
@@ -560,11 +562,15 @@ const getOrders = async (query: Record<string, any>, user: AuthUser, platformId:
         calculated_totals: r.order.calculated_totals,
         order_status: r.order.order_status,
         financial_status: r.order.financial_status,
-        tier_id: r.order.tier_id,
+        pricing_tier_id: r.order.tier_id,
+        pricing_tier: r.tier,
         created_at: r.order.created_at,
         updated_at: r.order.updated_at,
         item_count: itemCounts[r.order.id] || 0,
         item_preview: itemPreviews[r.order.id] || [],
+        logistics_pricing: r.order.logistics_pricing,
+        platform_pricing: r.order.platform_pricing,
+        final_pricing: r.order.final_pricing,
     }));
 
     return {
@@ -1157,7 +1163,7 @@ const adjustLogisticsPricing = async (
         adjusted_price: payload.adjusted_price,
         adjustment_reason: payload.adjustment_reason,
         adjusted_at: new Date().toISOString(),
-        adjusted_by: user.id,
+        adjusted_by: user.email,
     };
 
     // Step 5: Update order
@@ -1167,6 +1173,7 @@ const adjustLogisticsPricing = async (
             logistics_pricing: updatedLogisticsPricing,
             platform_pricing: {
                 ...platformPricing,
+                margin_percent: order.company.platform_margin_percent,
                 margin_amount: Number(updatedLogisticsPricing.adjusted_price) * (Number(order.company.platform_margin_percent) / 100)
             },
             order_status: 'PENDING_APPROVAL',
