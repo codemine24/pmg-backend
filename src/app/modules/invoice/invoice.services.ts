@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
 import httpStatus from "http-status";
 import { db } from "../../../db";
-import { companies, financialStatusHistory, invoices, orders } from "../../../db/schema";
+import { companies, financialStatusHistory, invoices, orders, users } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
 import { AuthUser } from "../../interface/common";
 import { getPresignedUrl } from "../../services/s3.service";
@@ -14,6 +14,7 @@ import { invoiceGenerator } from "../../utils/invoice";
 import { sendEmail } from "../../services/email.service";
 import { emailTemplates } from "../../utils/email-templates";
 import config from "../../config";
+import { multipleEmailSender } from "../../utils/email-sender";
 
 // ----------------------------------- GET INVOICE BY ID --------------------------------------
 const getInvoiceById = async (
@@ -459,6 +460,30 @@ const generateInvoice = async (platformId: string, user: AuthUser, payload: Gene
                 ]
                 : undefined,
         })
+
+        // Send notification to plaform admin
+        const platformAdmins = await db
+            .select({ email: users.email })
+            .from(users)
+            .where(
+                and(eq(users.platform_id, platformId),
+                    eq(users.role, 'ADMIN'),
+                    sql`${users.permission_template} = 'PLATFORM_ADMIN' AND ${users.email} NOT LIKE '%@system.internal'`)
+            )
+
+        const platformAdminEmails = platformAdmins.map(admin => admin.email);
+
+        await multipleEmailSender(
+            platformAdminEmails,
+            `Invoice Sent: ${invoice_id} for Order ${order.order_id}`,
+            emailTemplates.send_invoice_to_admin({
+                invoice_number: invoice_id,
+                order_id: order.order_id,
+                company_name: order.company.name,
+                final_total_price: (order.final_pricing as any)?.total_price || 0,
+                download_invoice_url: `${config.server_url}/client/v1/invoice/download-pdf/${invoice_id}?pid=${platformId}`,
+            })
+        );
     }
 
     // Step 4: Return invoice

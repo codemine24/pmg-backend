@@ -30,6 +30,14 @@ type SendInvoiceToClientTemplatePayload = {
     download_invoice_url: string
 };
 
+type SendInvoiceToAdminTemplatePayload = {
+    invoice_number: string,
+    order_id: string,
+    company_name: string,
+    final_total_price: string,
+    download_invoice_url: string
+};
+
 export const emailTemplates = {
     adjust_price: (data: AdjustPriceTemplatePayload) => (
         `
@@ -191,6 +199,38 @@ export const emailTemplates = {
                                     </div>
                                     <a href="${data.download_invoice_url}" style="display: inline-block; margin: 24px 0; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">Download Cost Estimate</a>
                                     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280;">Thank you for your business. For questions about this invoice, please contact your account manager.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+		`
+    ),
+    send_invoice_to_admin: (data: SendInvoiceToAdminTemplatePayload) => (
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f6f9fc;">
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f6f9fc;">
+                <tr>
+                    <td align="center" style="padding: 40px 20px;">
+                        <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="margin: 0 0 24px; font-size: 28px; font-weight: bold; color: #1f2937;">Invoice Sent to Client</h1>
+                                    <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.6; color: #374151;">An invoice has been sent to the client for order <strong>${data.order_id}</strong>.</p>
+                                    <div style="background-color: #f9fafb; border-radius: 8px; padding: 24px; margin: 24px 0;">
+                                        <p style="margin: 8px 0; font-size: 14px; color: #374151;"><strong>Invoice Number:</strong> ${data.invoice_number}</p>
+                                        <p style="margin: 8px 0; font-size: 14px; color: #374151;"><strong>Order ID:</strong> ${data.order_id}</p>
+                                        <p style="margin: 8px 0; font-size: 14px; color: #374151;"><strong>Company:</strong> ${data.company_name}</p>
+                                        <p style="margin: 8px 0; font-size: 18px; font-weight: bold; color: #111827;">Total Amount: ${data.final_total_price} AED</p>
+                                    </div>
                                 </td>
                             </tr>
                         </table>
