@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import httpStatus from "http-status";
-import { transitionOrdersOnEventEnd } from "./cron.services";
+import { CronServices } from "./cron.services";
 
 /**
  * HTTP endpoint handler for event end cron job
@@ -8,7 +8,7 @@ import { transitionOrdersOnEventEnd } from "./cron.services";
  */
 const handleEventEndCron = async (req: Request, res: Response) => {
     try {
-        const result = await transitionOrdersOnEventEnd();
+        const result = await CronServices.transitionOrdersOnEventEnd();
 
         res.status(httpStatus.OK).json(result);
     } catch (error: any) {
