@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../../../db";
-import { orders } from "../../../db/schema";
-import { createStatusHistoryEntry, getSystemUserId } from "./cron.utils";
+import { orders, orderStatusHistory } from "../../../db/schema";
+import { getSystemUser } from "../../utils/helper-query";
 
 const transitionOrdersOnEventEnd = async () => {
     try {
@@ -22,7 +22,12 @@ const transitionOrdersOnEventEnd = async () => {
 
         for (const order of ordersToUpdate) {
             // Get system user ID for this platform
-            const systemUserId = await getSystemUserId(order.platform_id);
+            const systemUser = await getSystemUser(order.platform_id);
+
+            if (!systemUser) {
+                console.error(`❌ No system user found for platform ID: ${order.platform_id}`);
+                continue;
+            }
 
             // Update status to AWAITING_RETURN
             await db
@@ -34,13 +39,13 @@ const transitionOrdersOnEventEnd = async () => {
                 .where(eq(orders.id, order.id));
 
             // Create status history entry
-            await createStatusHistoryEntry(
-                order.id,
-                "AWAITING_RETURN",
-                systemUserId,
-                "Automatic transition on event end date",
-                order.platform_id
-            );
+            await db.insert(orderStatusHistory).values({
+                platform_id: order.platform_id,
+                order_id: order.id,
+                status: "AWAITING_RETURN",
+                notes: "Automatic transition on event end date",
+                updated_by: systemUser.id,
+            });
 
             updatedCount++;
         }
@@ -49,11 +54,6 @@ const transitionOrdersOnEventEnd = async () => {
             `✅ Event end cron: Updated ${updatedCount} orders to AWAITING_RETURN`
         );
 
-        return {
-            success: true,
-            updatedCount,
-            message: `Transitioned ${updatedCount} orders to AWAITING_RETURN`,
-        };
     } catch (error: any) {
         console.error("❌ Event end cron error:", error);
         throw error;
