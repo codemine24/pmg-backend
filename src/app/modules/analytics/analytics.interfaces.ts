@@ -32,3 +32,42 @@ export interface TimeSeriesQuery {
     startDate?: string;
     endDate?: string;
 }
+
+export interface MarginSummary {
+    totalMarginAmount: number;
+    averageMarginPercent: number;
+    orderCount: number;
+    timeRange: {
+        start: string;
+        end: string;
+    };
+    filters: {
+        companyId: string | null;
+        companyName: string;
+    };
+}
+
+export type CompanyBreakdownSortBy = 'revenue' | 'margin' | 'orderCount' | 'companyName';
+
+export interface CompanyMetrics {
+    companyId: string;
+    companyName: string;
+    totalRevenue: number;
+    totalMarginAmount: number;
+    averageMarginPercent: number;
+    orderCount: number;
+    averageOrderValue: number;
+}
+
+export interface CompanyBreakdown {
+    companies: CompanyMetrics[];
+    timeRange: {
+        start: string;
+        end: string;
+    };
+    totals: {
+        totalRevenue: number;
+        totalMarginAmount: number;
+        totalOrderCount: number;
+    };
+}

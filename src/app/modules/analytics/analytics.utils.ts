@@ -73,3 +73,15 @@ export function formatPeriodLabel(date: Date, groupBy: TimeGrouping): string {
     // year
     return `${date.getFullYear()}`;
 }
+
+
+export const REVENUE_ORDER_STATUSES = [
+    'CONFIRMED',
+    'IN_PREPARATION',
+    'READY_FOR_DELIVERY',
+    'IN_TRANSIT',
+    'DELIVERED',
+    'IN_USE',
+    'AWAITING_RETURN',
+    'CLOSED',
+]

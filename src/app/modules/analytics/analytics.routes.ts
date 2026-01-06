@@ -13,4 +13,28 @@ router.get(
     AnalyticsControllers.getTimeSeries
 );
 
+// Get revenue summary (ADMIN only)
+router.get(
+    "/revenue-summary",
+    platformValidator,
+    auth('ADMIN'),
+    AnalyticsControllers.getRevenueSummary
+);
+
+// Get margin summary (ADMIN only)
+router.get(
+    "/margin-summary",
+    platformValidator,
+    auth('ADMIN'),
+    AnalyticsControllers.getMarginSummary
+);
+
+// Get company breakdown (ADMIN only)
+router.get(
+    "/company-breakdown",
+    platformValidator,
+    auth('ADMIN'),
+    AnalyticsControllers.getCompanyBreakdown
+);
+
 export const AnalyticsRoutes = router;
