@@ -4,7 +4,7 @@ import { db } from "../../../db";
 import { companies, invoices, orders } from "../../../db/schema";
 import CustomizedError from "../../error/customized-error";
 import { AuthUser } from "../../interface/common";
-import { TimeSeries, TimePeriodMetrics, TimeSeriesQuery, MarginSummary } from "./analytics.interfaces";
+import { TimeSeries, TimePeriodMetrics, TimeSeriesQuery, MarginSummary, CompanyBreakdown, CompanyBreakdownSortBy, CompanyMetrics } from "./analytics.interfaces";
 import { calculateTimeRange, formatPeriodLabel, REVENUE_ORDER_STATUSES } from "./analytics.utils";
 
 const getRevenueSummary = async (
@@ -295,8 +295,115 @@ const getMarginSummary = async (
     };
 };
 
+// ----------------------------------- GET COMPANY BREAKDOWN -----------------------------------
+const getCompanyBreakdown = async (
+    platformId: string,
+    userCompanies: string[],
+    start_date?: string,
+    end_date?: string,
+    time_period?: "month" | "quarter" | "year",
+    sort_by: CompanyBreakdownSortBy = "revenue",
+    sort_order: "asc" | "desc" = "desc"
+): Promise<CompanyBreakdown> => {
+    const timeRange = calculateTimeRange(start_date, end_date, time_period);
+
+    // Build query conditions - always filter by platform
+    const conditions = [
+        eq(orders.platform_id, platformId),
+        inArray(orders.order_status, REVENUE_ORDER_STATUSES as any),
+    ];
+
+    // Company scope filtering
+    if (!userCompanies.includes("*")) {
+        conditions.push(inArray(orders.company_id, userCompanies));
+    }
+
+    // Execute query with grouping by company
+    const result = await db
+        .select({
+            companyId: orders.company_id,
+            companyName: companies.name,
+            totalRevenue: sql<number>`COALESCE(SUM((${orders.final_pricing}->>'total_price')::numeric), 0)`,
+            totalMarginAmount: sql<number>`COALESCE(SUM((${orders.platform_pricing}->>'margin_amount')::numeric), 0)`,
+            averageMarginPercent: sql<number>`COALESCE(AVG((${orders.platform_pricing}->>'margin_percent')::numeric), 0)`,
+            orderCount: sql<number>`COUNT(*)`,
+        })
+        .from(orders)
+        .innerJoin(companies, eq(orders.company_id, companies.id))
+        .leftJoin(invoices, eq(invoices.order_id, orders.id))
+        .where(
+            and(
+                ...conditions,
+                gte(invoices.invoice_paid_at, timeRange.start),
+                lte(invoices.invoice_paid_at, timeRange.end)
+            )
+        )
+        .groupBy(orders.company_id, companies.name);
+
+    // Calculate average order value and format data
+    const companyMetrics: CompanyMetrics[] = result.map((row) => {
+        const orderCount = Number(row.orderCount);
+        const totalRevenue = Number(row.totalRevenue);
+        const averageOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
+
+        return {
+            companyId: row.companyId,
+            companyName: row.companyName,
+            totalRevenue,
+            totalMarginAmount: Number(row.totalMarginAmount),
+            averageMarginPercent: Number(
+                parseFloat(row.averageMarginPercent.toString()).toFixed(2)
+            ),
+            orderCount,
+            averageOrderValue: Number(averageOrderValue.toFixed(2)),
+        };
+    });
+
+    // Sort results
+    const sortedMetrics = companyMetrics.sort((a, b) => {
+        let comparison = 0;
+
+        switch (sort_by) {
+            case "revenue":
+                comparison = a.totalRevenue - b.totalRevenue;
+                break;
+            case "margin":
+                comparison = a.totalMarginAmount - b.totalMarginAmount;
+                break;
+            case "orderCount":
+                comparison = a.orderCount - b.orderCount;
+                break;
+            case "companyName":
+                comparison = a.companyName.localeCompare(b.companyName);
+                break;
+        }
+
+        return sort_order === "asc" ? comparison : -comparison;
+    });
+
+    // Calculate totals
+    const totals = {
+        totalRevenue: companyMetrics.reduce((sum, m) => sum + m.totalRevenue, 0),
+        totalMarginAmount: companyMetrics.reduce(
+            (sum, m) => sum + m.totalMarginAmount,
+            0
+        ),
+        totalOrderCount: companyMetrics.reduce((sum, m) => sum + m.orderCount, 0),
+    };
+
+    return {
+        companies: sortedMetrics,
+        timeRange: {
+            start: timeRange.start.toISOString(),
+            end: timeRange.end.toISOString(),
+        },
+        totals,
+    };
+};
+
 export const AnalyticsServices = {
     getTimeSeries,
     getRevenueSummary,
     getMarginSummary,
+    getCompanyBreakdown,
 };

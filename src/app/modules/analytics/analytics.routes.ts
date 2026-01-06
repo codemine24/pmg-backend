@@ -29,4 +29,12 @@ router.get(
     AnalyticsControllers.getMarginSummary
 );
 
+// Get company breakdown (ADMIN only)
+router.get(
+    "/company-breakdown",
+    platformValidator,
+    auth('ADMIN'),
+    AnalyticsControllers.getCompanyBreakdown
+);
+
 export const AnalyticsRoutes = router;
