@@ -30,7 +30,7 @@ app.use(
       callback(null, origin); // allow all domains dynamically
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "x-platform"],
   })
 );
 
