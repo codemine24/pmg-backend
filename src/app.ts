@@ -14,7 +14,21 @@ const app: Application = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookiePerser());
-app.use(cors({ origin: "*" }));
+
+// cors configuration
+app.use((req, res, next) => {
+  res.header("Vary", "Origin");
+  next();
+});
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    callback(null, origin);
+  },
+  allowedHeaders: "Content-Type, Authorization",
+  credentials: true
+}));
 
 // test server
 app.get("/", (req: Request, res: Response) => {
