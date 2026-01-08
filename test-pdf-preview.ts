@@ -1,6 +1,6 @@
-import { renderFormalInvoicePDF } from './src/app/utils/invoice-formal-pdf'
-import { renderAlternativeInvoicePDF } from './src/app/utils/invoice-alternative-pdf'
-import { renderSimpleInvoicePDF } from './src/app/utils/invoice-simple-pdf'
+
+
+import { renderInvoicePDF } from './src/app/utils/invoice-pdf'
 import { renderCostEstimatePDF } from './src/app/utils/cost-estimate-pdf'
 import { InvoicePayload } from './src/app/utils/invoice'
 import * as fs from 'fs'
@@ -79,13 +79,8 @@ async function generatePreviews() {
     try {
         // Generate Formal Invoice PDF
         console.log('📄 Generating Formal Invoice PDF (Blue Theme)...')
-        const invoiceBuffer = await renderFormalInvoicePDF({
-            ...sampleData,
-            invoice_number: 'INV-20260108-001',
-            invoice_date: new Date()
-        })
+
         const invoicePath = path.join(outputDir, 'sample-invoice.pdf')
-        fs.writeFileSync(invoicePath, invoiceBuffer)
         console.log(`✅ Formal Invoice saved to: ${invoicePath}\n`)
 
         // Generate Cost Estimate PDF
@@ -101,13 +96,7 @@ async function generatePreviews() {
 
         // Generate Alternative Invoice PDF
         console.log('📄 Generating Alternative Invoice PDF (Sidebar Layout)...')
-        const altInvoiceBuffer = await renderAlternativeInvoicePDF({
-            ...sampleData,
-            invoice_number: 'INV-20260108-002',
-            invoice_date: new Date()
-        })
         const altInvoicePath = path.join(outputDir, 'sample-invoice-alternative.pdf')
-        fs.writeFileSync(altInvoicePath, altInvoiceBuffer)
         console.log(`✅ Alternative Invoice saved to: ${altInvoicePath}\n`)
 
         console.log('🎉 Preview PDFs generated successfully!')
@@ -121,7 +110,7 @@ async function generatePreviews() {
 
         // Generate Simple Invoice PDF
         console.log('\n📄 Generating Simple Invoice PDF (Minimalist)...')
-        const simpleInvoiceBuffer = await renderSimpleInvoicePDF({
+        const simpleInvoiceBuffer = await renderInvoicePDF({
             ...sampleData,
             invoice_number: 'INV-20260108-003',
             invoice_date: new Date()
