@@ -377,6 +377,8 @@ const completeInboundScan = async (
         venue_country: venueLocation.country || 'N/A',
         venue_city: venueLocation.city || 'N/A',
         venue_address: venueLocation.address || 'N/A',
+        order_status: order.order_status,
+        financial_status: order.financial_status,
         pricing: {
             logistics_base_price: (order.logistics_pricing as any)?.base_price || 0,
             platform_margin_percent: (order.platform_pricing as any)?.margin_percent || 0,

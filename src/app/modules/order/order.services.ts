@@ -942,6 +942,10 @@ const progressOrderStatus = async (
 ) => {
     const { new_status, notes } = payload;
 
+    if (new_status === 'CONFIRMED' && user.role !== 'CLIENT') {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, "Only client can confirm orders");
+    }
+
     // Step 1: Get order with company details and items
     const order = await db.query.orders.findFirst({
         where: and(
@@ -1789,6 +1793,8 @@ const approveStandardPricing = async (
         venue_country: venueLocation.country || 'N/A',
         venue_city: venueLocation.city || 'N/A',
         venue_address: venueLocation.address || 'N/A',
+        order_status: order.order_status,
+        financial_status: order.financial_status,
         pricing: {
             logistics_base_price: (order.logistics_pricing as any)?.base_price || 0,
             platform_margin_percent: (order.platform_pricing as any)?.margin_percent || 0,
@@ -1933,6 +1939,8 @@ const approvePlatformPricing = async (
         venue_country: venueLocation.country || 'N/A',
         venue_city: venueLocation.city || 'N/A',
         venue_address: venueLocation.address || 'N/A',
+        order_status: order.order_status,
+        financial_status: order.financial_status,
         pricing: {
             logistics_base_price: String(logistics_base_price) || '0',
             platform_margin_percent: String(platform_margin_percent) || '0',
