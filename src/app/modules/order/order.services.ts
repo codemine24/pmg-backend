@@ -1934,10 +1934,10 @@ const approvePlatformPricing = async (
         venue_city: venueLocation.city || 'N/A',
         venue_address: venueLocation.address || 'N/A',
         pricing: {
-            logistics_base_price: logistics_base_price || 0,
-            platform_margin_percent: platform_margin_percent || 0,
-            platform_margin_amount: platformMarginAmount || 0,
-            final_total_price: finalTotalPrice || 0,
+            logistics_base_price: String(logistics_base_price) || '0',
+            platform_margin_percent: String(platform_margin_percent) || '0',
+            platform_margin_amount: String(platformMarginAmount) || '0',
+            final_total_price: String(finalTotalPrice) || '0',
             show_breakdown: false
         },
         items: order.items.map(item => ({
