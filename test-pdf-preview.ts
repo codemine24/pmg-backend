@@ -22,6 +22,8 @@ const sampleData: InvoicePayload = {
     venue_country: 'United Arab Emirates',
     venue_city: 'Dubai',
     venue_address: 'Sheikh Zayed Road, Convention Gate, Dubai',
+    order_status: 'COMPLETED',
+    financial_status: 'PAID',
     items: [
         {
             asset_name: 'LED Screen 4x3m',
@@ -108,7 +110,7 @@ async function generatePreviews() {
         console.log('  3. sample-invoice-simple.pdf (Simple minimalist design)')
         console.log('  4. sample-cost-estimate.pdf (Modern minimalist design)')
 
-        // Generate Simple Invoice PDF
+        // Generate Simple Invoice PDF erte
         console.log('\n📄 Generating Simple Invoice PDF (Minimalist)...')
         const simpleInvoiceBuffer = await renderInvoicePDF({
             ...sampleData,

@@ -133,6 +133,8 @@ export type InvoicePayload = {
     venue_country: string;
     venue_city: string;
     venue_address: string;
+    order_status: string;
+    financial_status: string;
     items: Array<{ asset_name: string, quantity: number, handling_tags: HandlingTag[], from_collection_name?: string }>;
     pricing: {
         logistics_base_price: string;
