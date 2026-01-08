@@ -30,10 +30,21 @@ const sampleData: InvoicePayload = {
             from_collection_name: 'Premium AV Collection'
         },
         {
+            asset_name: 'LED Screen 4x3m',
+            quantity: 2,
+            handling_tags: ['Fragile', 'HeavyLift'],
+            from_collection_name: 'Premium AV Collection'
+        },
+        {
             asset_name: 'Sound System - 5000W',
             quantity: 1,
             handling_tags: ['HighValue'],
             from_collection_name: 'Audio Equipment'
+        },
+        {
+            asset_name: 'Wireless Microphone Set',
+            quantity: 5,
+            handling_tags: ['HighValue'],
         },
         {
             asset_name: 'Stage Lighting Kit',

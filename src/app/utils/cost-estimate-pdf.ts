@@ -181,17 +181,19 @@ export async function renderCostEstimatePDF(data: InvoicePayload & { estimate_nu
             doc.moveDown(1)
 
             const tableTop = doc.y
-            const col1X = margin
-            const col2X = margin + contentWidth * 0.58
-            const col3X = margin + contentWidth * 0.70
+            const colSNoX = margin
+            const colAssetX = margin + 35
+            const colQtyX = margin + contentWidth * 0.65
+            const colNotesX = margin + contentWidth * 0.77
 
             // Table header
             doc.fontSize(8)
                 .font('Helvetica-Bold')
                 .fillColor('#000')
-                .text('ASSET NAME', col1X, tableTop)
-                .text('QTY', col2X, tableTop, { width: contentWidth * 0.1, align: 'center' })
-                .text('NOTES', col3X, tableTop)
+                .text('S.No', colSNoX, tableTop, { width: 30, align: 'center' })
+                .text('ASSET NAME', colAssetX, tableTop)
+                .text('QTY', colQtyX, tableTop, { width: contentWidth * 0.1, align: 'center' })
+                .text('NOTES', colNotesX, tableTop)
 
             // Header line
             doc.moveTo(margin, tableTop + 12)
@@ -205,25 +207,18 @@ export async function renderCostEstimatePDF(data: InvoicePayload & { estimate_nu
             data.items.forEach((item, index) => {
                 const rowY = currentY
 
-                // Asset name with number badge
-                doc.fontSize(7)
+                // Serial number as plain text
+                doc.fontSize(9)
                     .font('Helvetica-Bold')
                     .fillColor('#000')
-                    .text(String(index + 1), col1X, rowY + 1, { width: 15, align: 'center' })
+                    .text(String(index + 1), colSNoX, rowY, { width: 30, align: 'center' })
 
-                doc.circle(col1X + 7.5, rowY + 6, 9)
-                    .fill('#000')
-
-                doc.fontSize(7)
-                    .font('Helvetica-Bold')
-                    .fillColor('#fff')
-                    .text(String(index + 1), col1X, rowY + 1, { width: 15, align: 'center' })
-
+                // Asset name
                 doc.fontSize(10)
                     .font('Helvetica')
                     .fillColor('#000')
-                    .text(item.asset_name, col1X + 25, rowY, {
-                        width: contentWidth * 0.5,
+                    .text(item.asset_name, colAssetX, rowY, {
+                        width: contentWidth * 0.55,
                         continued: false,
                     })
 
@@ -231,7 +226,7 @@ export async function renderCostEstimatePDF(data: InvoicePayload & { estimate_nu
                 doc.fontSize(10)
                     .font('Helvetica-Bold')
                     .fillColor('#000')
-                    .text(String(item.quantity), col2X, rowY, {
+                    .text(String(item.quantity), colQtyX, rowY, {
                         width: contentWidth * 0.1,
                         align: 'center',
                         continued: false,
@@ -243,8 +238,8 @@ export async function renderCostEstimatePDF(data: InvoicePayload & { estimate_nu
                     doc.fontSize(7)
                         .font('Helvetica')
                         .fillColor('#666')
-                        .text(`From: ${item.from_collection_name}`, col3X, notesY, {
-                            width: contentWidth * 0.18,
+                        .text(`From: ${item.from_collection_name}`, colNotesX, notesY, {
+                            width: contentWidth * 0.23,
                             continued: false,
                         })
                     notesY = doc.y
@@ -255,8 +250,8 @@ export async function renderCostEstimatePDF(data: InvoicePayload & { estimate_nu
                     doc.fontSize(7)
                         .font('Helvetica')
                         .fillColor('#999')
-                        .text(tagsText, col3X, notesY, {
-                            width: contentWidth * 0.18,
+                        .text(tagsText, colNotesX, notesY, {
+                            width: contentWidth * 0.23,
                             continued: false,
                         })
                 }
@@ -379,7 +374,7 @@ export async function renderCostEstimatePDF(data: InvoicePayload & { estimate_nu
             doc.rect(margin, doc.y + 2, 100, 1)
                 .fill('#000')
 
-            doc.moveDown(0.5)
+            doc.moveDown(1)
 
             const notes = [
                 'This is an estimate only and not a final invoice',
@@ -390,7 +385,7 @@ export async function renderCostEstimatePDF(data: InvoicePayload & { estimate_nu
 
             notes.forEach(note => {
                 // Bullet point
-                doc.circle(margin + 3, doc.y + 5, 2)
+                doc.circle(margin + 3, doc.y + 3, 2)
                     .fill('#000')
 
                 doc.fontSize(8)
@@ -416,7 +411,7 @@ export async function renderCostEstimatePDF(data: InvoicePayload & { estimate_nu
             // ============================================================
             // FOOTER
             // ============================================================
-            const footerY = pageHeight - 40
+            const footerY = pageHeight - 65
 
             doc.moveTo(margin, footerY)
                 .lineTo(pageWidth - margin, footerY)
