@@ -28,25 +28,25 @@ export const PERMISSIONS = {
     COMPANIES_ALL: 'companies:*',
 
     // ==================== WAREHOUSE MANAGEMENT ====================
-    WAREHOUSES_CREATE: 'warehouses:create',
-    WAREHOUSES_READ: 'warehouses:read',
-    WAREHOUSES_UPDATE: 'warehouses:update',
-    WAREHOUSES_ARCHIVE: 'warehouses:archive',
+    WAREHOUSES_CREATE: 'warehouses:create', // ✅
+    WAREHOUSES_READ: 'warehouses:read', // ✅
+    WAREHOUSES_UPDATE: 'warehouses:update', // ✅
+    WAREHOUSES_ARCHIVE: 'warehouses:archive', // ✅
     WAREHOUSES_ALL: 'warehouses:*',
 
     // ==================== ZONE MANAGEMENT ====================
-    ZONES_CREATE: 'zones:create',
-    ZONES_READ: 'zones:read',
-    ZONES_UPDATE: 'zones:update',
-    ZONES_DELETE: 'zones:delete',
+    ZONES_CREATE: 'zones:create', // ✅
+    ZONES_READ: 'zones:read', // ✅
+    ZONES_UPDATE: 'zones:update', // ✅
+    ZONES_DELETE: 'zones:delete', // ✅
     ZONES_ASSIGN_COMPANY: 'zones:assign_company',
     ZONES_ALL: 'zones:*',
 
     // ==================== BRAND MANAGEMENT ====================
-    BRANDS_CREATE: 'brands:create',
-    BRANDS_READ: 'brands:read',
-    BRANDS_UPDATE: 'brands:update',
-    BRANDS_DELETE: 'brands:delete',
+    BRANDS_CREATE: 'brands:create', // ✅
+    BRANDS_READ: 'brands:read', // ✅
+    BRANDS_UPDATE: 'brands:update', // ✅
+    BRANDS_DELETE: 'brands:delete', // ✅
     BRANDS_ALL: 'brands:*',
 
     // ==================== ASSET MANAGEMENT ====================
