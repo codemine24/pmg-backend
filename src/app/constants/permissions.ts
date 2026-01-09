@@ -50,26 +50,26 @@ export const PERMISSIONS = {
     BRANDS_ALL: 'brands:*',
 
     // ==================== ASSET MANAGEMENT ====================
-    ASSETS_CREATE: 'assets:create',
-    ASSETS_READ: 'assets:read',
-    ASSETS_UPDATE: 'assets:update',
-    ASSETS_DELETE: 'assets:delete',
-    ASSETS_GENERATE_QR: 'assets:generate_qr',
+    ASSETS_CREATE: 'assets:create', // ✅
+    ASSETS_READ: 'assets:read', // ✅
+    ASSETS_UPDATE: 'assets:update', // ✅
+    ASSETS_DELETE: 'assets:delete', // ✅
+    ASSETS_GENERATE_QR: 'assets:generate_qr', // ✅
     ASSETS_UPLOAD_PHOTOS: 'assets:upload_photos',
     ASSETS_ALL: 'assets:*',
 
     // ==================== COLLECTION MANAGEMENT ====================
-    COLLECTIONS_CREATE: 'collections:create',
-    COLLECTIONS_READ: 'collections:read',
-    COLLECTIONS_UPDATE: 'collections:update',
-    COLLECTIONS_DELETE: 'collections:delete',
-    COLLECTIONS_ASSIGN_ASSETS: 'collections:assign_assets',
+    COLLECTIONS_CREATE: 'collections:create', // ✅
+    COLLECTIONS_READ: 'collections:read', // ✅
+    COLLECTIONS_UPDATE: 'collections:update', // ✅
+    COLLECTIONS_DELETE: 'collections:delete', // ✅
+    COLLECTIONS_ASSIGN_ASSETS: 'collections:assign_assets', // ✅
     COLLECTIONS_ALL: 'collections:*',
 
     // ==================== PRICING CONFIGURATION ====================
-    PRICING_TIERS_CREATE: 'pricing_tiers:create',
-    PRICING_TIERS_READ: 'pricing_tiers:read',
-    PRICING_TIERS_UPDATE: 'pricing_tiers:update',
+    PRICING_TIERS_CREATE: 'pricing_tiers:create', // ✅
+    PRICING_TIERS_READ: 'pricing_tiers:read', // ✅
+    PRICING_TIERS_UPDATE: 'pricing_tiers:update', // ✅
     PRICING_TIERS_ACTIVATE: 'pricing_tiers:activate',
     PRICING_TIERS_DEACTIVATE: 'pricing_tiers:deactivate',
     PRICING_TIERS_ALL: 'pricing_tiers:*',

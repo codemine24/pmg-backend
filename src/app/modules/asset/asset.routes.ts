@@ -5,6 +5,8 @@ import platformValidator from "../../middleware/platform-validator";
 import { fileUploader } from "../../middleware/upload";
 import { AssetSchemas } from "./asset.schemas";
 import { AssetControllers } from "./assets.controllers";
+import requirePermission from "../../middleware/permission";
+import { PERMISSIONS } from "../../constants/permissions";
 
 const router = Router();
 
@@ -13,6 +15,7 @@ router.post(
   "/",
   platformValidator,
   auth('ADMIN', 'LOGISTICS'),
+  requirePermission(PERMISSIONS.ASSETS_CREATE),
   payloadValidator(AssetSchemas.createAssetSchema),
   AssetControllers.createAsset
 );
@@ -40,6 +43,7 @@ router.post(
   "/generate-qr-code",
   platformValidator,
   auth('ADMIN', 'LOGISTICS'),
+  requirePermission(PERMISSIONS.ASSETS_GENERATE_QR),
   payloadValidator(AssetSchemas.generateQRCodeSchema),
   AssetControllers.generateQRCode
 );
@@ -72,21 +76,55 @@ router.post(
 );
 
 // Get all assets
-router.get("/", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetControllers.getAssets);
+router.get(
+  "/",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS', 'CLIENT'),
+  requirePermission(PERMISSIONS.ASSETS_READ),
+  AssetControllers.getAssets
+);
 
 // Get asset by id
-router.get("/:id", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetControllers.getAssetById);
+router.get(
+  "/:id",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS', 'CLIENT'),
+  AssetControllers.getAssetById
+);
 
 // Get asset availability stats
-router.get("/:id/availability-stats", platformValidator, auth('ADMIN', 'LOGISTICS', 'CLIENT'), AssetControllers.getAssetAvailabilityStats);
+router.get(
+  "/:id/availability-stats",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS', 'CLIENT'),
+  AssetControllers.getAssetAvailabilityStats
+);
 
 // Get asset scan history
-router.get("/:id/scan-history", platformValidator, auth('ADMIN', 'LOGISTICS'), AssetControllers.getAssetScanHistory);
+router.get(
+  "/:id/scan-history",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS'),
+  AssetControllers.getAssetScanHistory
+);
 
 // Update asset
-router.patch("/:id", platformValidator, auth('ADMIN', 'LOGISTICS'), payloadValidator(AssetSchemas.updateAssetSchema), AssetControllers.updateAsset);
+router.patch(
+  "/:id",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS'),
+  requirePermission(PERMISSIONS.ASSETS_UPDATE),
+  payloadValidator(AssetSchemas.updateAssetSchema),
+  AssetControllers.updateAsset
+);
 
 // Delete asset
-router.delete("/:id", platformValidator, auth('ADMIN', 'LOGISTICS'), AssetControllers.deleteAsset);
+router.delete(
+  "/:id",
+  platformValidator,
+  auth('ADMIN', 'LOGISTICS'),
+  requirePermission(PERMISSIONS.ASSETS_DELETE),
+  AssetControllers.deleteAsset
+);
 
 export const AssetRoutes = router;
