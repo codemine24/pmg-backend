@@ -18,40 +18,30 @@ const requirePermission = (...requiredPermissions: string[]) => {
             // Step 2: Get user's permissions array from database
             const userPermissions: string[] = user.permissions || [];
 
-            console.log("User Permissions: ", userPermissions);
+            // Step 3: Check if user has permission
+            const hasPermission = requiredPermissions.some(requiredPermission => {
+                // Check for exact permission match
+                if (userPermissions.includes(requiredPermission)) {
+                    return true;
+                }
 
-            /**
-             * Check if user has permission
-             * Supports both exact match and wildcard match
-             * 
-             * Examples:
-             * - User has 'assets:read' → Can access 'assets:read'
-             * - User has 'assets:*' → Can access 'assets:read', 'assets:create', 'assets:update', etc.
-             */
-            // const hasPermission = requiredPermissions.some(requiredPermission => {
-            //     // Check for exact permission match
-            //     if (userPermissions.includes(requiredPermission)) {
-            //         return true;
-            //     }
+                // Check for wildcard permission match
+                const [module] = requiredPermission.split(':');
+                const wildcardPermission = `${module}:*`;
 
-            //     // Check for wildcard permission match
-            //     // Extract module from required permission (e.g., 'assets' from 'assets:read')
-            //     const [module] = requiredPermission.split(':');
-            //     const wildcardPermission = `${module}:*`;
+                // Check if user has wildcard permission for this module
+                return userPermissions.includes(wildcardPermission);
+            });
 
-            //     // Check if user has wildcard permission for this module
-            //     return userPermissions.includes(wildcardPermission);
-            // });
+            if (!hasPermission) {
+                const permissionList = requiredPermissions.join(', ');
+                throw new CustomizedError(
+                    httpStatus.FORBIDDEN,
+                    `Access denied. Required permission: ${permissionList}`
+                );
+            }
 
-            // if (!hasPermission) {
-            //     const permissionList = requiredPermissions.join(', ');
-            //     throw new CustomizedError(
-            //         httpStatus.FORBIDDEN,
-            //         `Access denied. Required permission: ${permissionList}`
-            //     );
-            // }
-
-            // User has permission, proceed to next middleware
+            // Step 4: User has permission, proceed to next middleware
             next();
         } catch (error) {
             next(error);
