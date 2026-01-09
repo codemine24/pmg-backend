@@ -1,6 +1,4 @@
-import httpStatus from "http-status";
 import { sortOrderType } from "../../constants/common";
-import CustomizedError from "../../error/customized-error";
 
 export const userSortableFields = [
   "name",
