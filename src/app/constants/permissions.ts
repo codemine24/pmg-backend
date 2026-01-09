@@ -75,21 +75,21 @@ export const PERMISSIONS = {
     PRICING_TIERS_ALL: 'pricing_tiers:*',
 
     // ==================== PRICING REVIEW ====================
-    PRICING_REVIEW: 'pricing:review',
-    PRICING_APPROVE_STANDARD: 'pricing:approve_standard',
-    PRICING_ADJUST: 'pricing:adjust',
-    PRICING_ADMIN_REVIEW_ADJUSTMENT: 'pricing:admin_review_adjustment',
+    PRICING_REVIEW: 'pricing:review', // ✅
+    PRICING_APPROVE_STANDARD: 'pricing:approve_standard', // ✅
+    PRICING_ADJUST: 'pricing:adjust', // ✅
+    PRICING_ADMIN_REVIEW_ADJUSTMENT: 'pricing:admin_review_adjustment', // ✅
     PRICING_ADMIN_APPROVE: 'pricing:admin_approve',
     PRICING_ALL: 'pricing:*',
 
     // ==================== ORDER MANAGEMENT ====================
-    ORDERS_CREATE: 'orders:create',
-    ORDERS_READ: 'orders:read',
+    ORDERS_CREATE: 'orders:create', // ✅
+    ORDERS_READ: 'orders:read', // ✅
     ORDERS_UPDATE: 'orders:update',
-    ORDERS_ADD_JOB_NUMBER: 'orders:add_job_number',
-    ORDERS_ADD_TIME_WINDOWS: 'orders:add_time_windows',
-    ORDERS_VIEW_STATUS_HISTORY: 'orders:view_status_history',
-    ORDERS_EXPORT: 'orders:export',
+    ORDERS_ADD_JOB_NUMBER: 'orders:add_job_number', // ✅
+    ORDERS_ADD_TIME_WINDOWS: 'orders:add_time_windows', // ✅
+    ORDERS_VIEW_STATUS_HISTORY: 'orders:view_status_history', // ✅
+    ORDERS_EXPORT: 'orders:export', // ✅
     ORDERS_ALL: 'orders:*',
 
     // ==================== QUOTES ====================
