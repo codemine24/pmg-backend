@@ -198,6 +198,8 @@ const getInvoices = async (
                 event_start_date: orders.event_start_date,
                 venue_name: orders.venue_name,
                 final_pricing: orders.final_pricing,
+                order_status: orders.order_status,
+                financial_status: orders.financial_status,
             },
             company: {
                 id: companies.id,
@@ -246,6 +248,8 @@ const getInvoices = async (
                 event_start_date: order.event_start_date,
                 venue_name: order.venue_name,
                 final_pricing: order.final_pricing,
+                order_status: order.order_status,
+                financial_status: order.financial_status,
             },
             company: {
                 id: company?.id,
@@ -368,9 +372,6 @@ const confirmPayment = async (
 const generateInvoice = async (platformId: string, user: AuthUser, payload: GenerateInvoicePayload) => {
     const { order_id, regenerate } = payload;
 
-    console.log("order_id", order_id);
-    console.log("platformId", platformId);
-
     // Step 1: Fetch order with company details
     const order = await db.query.orders.findFirst({
         where: and(
@@ -414,6 +415,8 @@ const generateInvoice = async (platformId: string, user: AuthUser, payload: Gene
         venue_country: venueLocation.country || 'N/A',
         venue_city: venueLocation.city || 'N/A',
         venue_address: venueLocation.address || 'N/A',
+        order_status: order.order_status,
+        financial_status: order.financial_status,
         pricing: {
             logistics_base_price: (order.logistics_pricing as any)?.base_price || 0,
             platform_margin_percent: (order.platform_pricing as any)?.margin_percent || 0,

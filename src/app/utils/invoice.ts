@@ -97,7 +97,7 @@ export const invoiceGenerator = async (data: InvoicePayload, regenerate: boolean
             // Update order financial status
             await tx.update(orders)
                 .set({
-                    financial_status: 'INVOICED',
+                    financial_status: 'PENDING_INVOICE',
                     updated_at: new Date(),
                 })
                 .where(and(eq(orders.id, data.id), eq(orders.platform_id, data.platform_id)));
@@ -133,6 +133,8 @@ export type InvoicePayload = {
     venue_country: string;
     venue_city: string;
     venue_address: string;
+    order_status: string;
+    financial_status: string;
     items: Array<{ asset_name: string, quantity: number, handling_tags: HandlingTag[], from_collection_name?: string }>;
     pricing: {
         logistics_base_price: string;

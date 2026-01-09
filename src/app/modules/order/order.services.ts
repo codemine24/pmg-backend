@@ -942,6 +942,10 @@ const progressOrderStatus = async (
 ) => {
     const { new_status, notes } = payload;
 
+    if (new_status === 'CONFIRMED' && user.role !== 'CLIENT') {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, "Only client can confirm orders");
+    }
+
     // Step 1: Get order with company details and items
     const order = await db.query.orders.findFirst({
         where: and(
@@ -1789,6 +1793,8 @@ const approveStandardPricing = async (
         venue_country: venueLocation.country || 'N/A',
         venue_city: venueLocation.city || 'N/A',
         venue_address: venueLocation.address || 'N/A',
+        order_status: order.order_status,
+        financial_status: order.financial_status,
         pricing: {
             logistics_base_price: (order.logistics_pricing as any)?.base_price || 0,
             platform_margin_percent: (order.platform_pricing as any)?.margin_percent || 0,
@@ -1933,6 +1939,8 @@ const approvePlatformPricing = async (
         venue_country: venueLocation.country || 'N/A',
         venue_city: venueLocation.city || 'N/A',
         venue_address: venueLocation.address || 'N/A',
+        order_status: order.order_status,
+        financial_status: order.financial_status,
         pricing: {
             logistics_base_price: String(logistics_base_price) || '0',
             platform_margin_percent: String(platform_margin_percent) || '0',
@@ -2261,6 +2269,50 @@ const getClientOrderStatistics = async (companyId: string, platformId: string) =
     };
 };
 
+const sendInvoice = async (user: AuthUser, platformId: string, orderId: string) => {
+    // Step 1: Fetch order with company details
+    const order = await db.query.orders.findFirst({
+        where: and(
+            eq(orders.id, orderId),
+            eq(orders.platform_id, platformId)
+        ),
+        with: {
+            company: true,
+        }
+    });
+
+    // Step 2: Verify order exists
+    if (!order) {
+        throw new CustomizedError(httpStatus.NOT_FOUND, 'Order not found');
+    }
+
+    // Step 3: Verify order is in QUOTED status
+    if (order.financial_status === 'INVOICED') {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, 'Order is already invoiced');
+    }
+
+    // Step 4: Verify order is in CLOSED status
+    if (order.order_status !== 'CLOSED') {
+        throw new CustomizedError(httpStatus.BAD_REQUEST, 'Order is not in CLOSED status');
+    }
+
+    // Step 5: Update order financial status to INVOICED
+    await db
+        .update(orders)
+        .set({
+            financial_status: 'INVOICED',
+            updated_at: new Date(),
+        })
+        .where(eq(orders.id, orderId));
+
+    // Step 6: Return updated order details
+    return {
+        id: order.id,
+        order_id: order.order_id,
+        financial_status: 'INVOICED',
+        updated_at: new Date(),
+    };
+};
 
 export const OrderServices = {
     submitOrderFromCart,
@@ -2280,6 +2332,7 @@ export const OrderServices = {
     approveQuote,
     declineQuote,
     getClientOrderStatistics,
+    sendInvoice,
 };
 
 
