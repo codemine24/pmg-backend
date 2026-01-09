@@ -11,19 +11,19 @@
 export const PERMISSIONS = {
     // ==================== AUTHENTICATION ====================
     AUTH_LOGIN: 'auth:login',
-    AUTH_RESET_PASSWORD: 'auth:reset_password',
+    AUTH_RESET_PASSWORD: 'auth:reset_password', // ✅
     AUTH_ALL: 'auth:*',
 
     // ==================== USER MANAGEMENT ====================
-    USERS_CREATE: 'users:create',
-    USERS_READ: 'users:read',
+    USERS_CREATE: 'users:create', // ✅
+    USERS_READ: 'users:read', // ✅
     USERS_ALL: 'users:*',
 
     // ==================== COMPANY MANAGEMENT ====================
-    COMPANIES_CREATE: 'companies:create',
-    COMPANIES_READ: 'companies:read',
-    COMPANIES_UPDATE: 'companies:update',
-    COMPANIES_ARCHIVE: 'companies:archive',
+    COMPANIES_CREATE: 'companies:create', // ✅
+    COMPANIES_READ: 'companies:read', // ✅
+    COMPANIES_UPDATE: 'companies:update', // ✅
+    COMPANIES_ARCHIVE: 'companies:archive', // ✅
     COMPANIES_SET_MARGIN: 'companies:set_margin',
     COMPANIES_ALL: 'companies:*',
 
