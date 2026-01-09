@@ -1,14 +1,17 @@
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
 import httpStatus from "http-status";
 import { Secret } from "jsonwebtoken";
 import { db } from "../../../db";
-import { companies, companyDomains, platforms, users } from "../../../db/schema";
+import { companies, companyDomains, platforms, users, otp } from "../../../db/schema";
 import config from "../../config";
 import CustomizedError from "../../error/customized-error";
-import { tokenGenerator } from "../../utils/jwt-helpers";
-import { LoginCredential, ResetPasswordPayload } from "./Auth.interfaces";
 import { AuthUser } from "../../interface/common";
+import { sendEmail } from "../../services/email.service";
+import { tokenGenerator } from "../../utils/jwt-helpers";
+import { ForgotPasswordPayload, LoginCredential, ResetPasswordPayload } from "./Auth.interfaces";
+import { OTPGenerator } from "../../utils/helper";
 
 const login = async (credential: LoginCredential, platformId: string) => {
   const { email, password } = credential;
@@ -254,8 +257,73 @@ const resetPassword = async (platformId: string, authUser: AuthUser, payload: Re
   return userData;
 };
 
+const forgotPassword = async (platformId: string, payload: ForgotPasswordPayload) => {
+  // Step 1: Validate payload structure
+  const { email, otp: inputOtp, new_password } = payload;
+
+  if (inputOtp && !new_password) {
+    throw new CustomizedError(
+      httpStatus.BAD_REQUEST,
+      "New password is required"
+    );
+  }
+
+  // Step 2: Handle OTP generation and sending
+  if (email && !inputOtp) {
+    // Step 2.1: Check if the user exists and is active
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.email, email),
+          eq(users.platform_id, platformId)
+        )
+      );
+
+    if (!user || !user.is_active) {
+      throw new CustomizedError(httpStatus.NOT_FOUND, "Invalid email or user is not active");
+    }
+
+    // Step 2.2: Generate OTP and expiration time
+    const generatedOTP = OTPGenerator();
+    const expirationTime = new Date(new Date().getTime() + 5 * 60000);
+
+    // Step 2.3: Prepare and send OTP email
+    // const emailBody = OTPTemplate(String(generatedOTP));
+    // const emailResponse = await emailSender(
+    //   email,
+    //   emailBody,
+    //   "OTP for password reset"
+    // );
+
+    // if (!emailResponse?.accepted?.length) {
+    //   throw new CustomizedError(
+    //     httpStatus.INTERNAL_SERVER_ERROR,
+    //     "Failed to send OTP"
+    //   );
+    // }
+
+    // Step 2.4: Save OTP record in the database
+    await db.insert(otp).values({
+      platform_id: platformId,
+      email,
+      otp: String(generatedOTP),
+      expires_at: expirationTime,
+    });
+
+    return {
+      message: "OTP sent successfully",
+    };
+  }
+
+  // ✅ Step 4: Handle invalid request cases
+  throw new CustomizedError(httpStatus.BAD_REQUEST, "Invalid request");
+};
+
 export const AuthServices = {
   login,
   getConfigByHostname,
   resetPassword,
+  forgotPassword
 };

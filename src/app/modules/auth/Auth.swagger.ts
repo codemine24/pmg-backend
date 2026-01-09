@@ -574,5 +574,174 @@
  *               $ref: '#/components/schemas/Error'
  */
 
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Request password reset
+ *     description: |
+ *       Initiates a password reset process by sending a reset link to the user's email.
+ *       The platform ID is required in the X-Platform header to identify which platform the user belongs to.
+ *       
+ *       **Security Features:**
+ *       - Generates a secure random token valid for 1 hour
+ *       - Sends password reset email with link
+ *       - Does not reveal if user exists (returns same message for security)
+ *       - Only active users receive reset emails
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User's email address
+ *                 example: "john.doe@example.com"
+ *     responses:
+ *       200:
+ *         description: Password reset email sent (or would be sent if user exists)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "If a user with that email exists, a password reset link has been sent."
+ *                 data:
+ *                   type: "null"
+ *                   example: null
+ *       400:
+ *         description: Bad request - Validation error or missing X-Platform header
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "VALIDATION_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid email address"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /api/auth/reset-password-with-token:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Reset password with token
+ *     description: |
+ *       Resets user password using the token received via email.
+ *       The platform ID is required in the X-Platform header to identify which platform the user belongs to.
+ *       
+ *       **Security Features:**
+ *       - Validates reset token and expiration (1 hour validity)
+ *       - Hashes new password with bcrypt
+ *       - Clears reset token after successful reset
+ *       - Validates new password strength (minimum 8 characters)
+ *     parameters:
+ *       - $ref: '#/components/parameters/PlatformHeader'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - new_password
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Reset token received via email
+ *                 example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+ *               new_password:
+ *                 type: string
+ *                 minLength: 8
+ *                 maxLength: 50
+ *                 description: New password (must be at least 8 characters)
+ *                 example: "NewSecurePass@456"
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Password has been reset successfully. You can now login with your new password."
+ *                 data:
+ *                   type: "null"
+ *                   example: null
+ *       400:
+ *         description: Bad request - Invalid/expired token, validation error, or missing X-Platform header
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "BAD_REQUEST"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid or expired reset token"
+ *                     details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           field:
+ *                             type: string
+ *                             example: "new_password"
+ *                           message:
+ *                             type: string
+ *                             example: "New password must be at least 8 characters"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
 export const authSwagger = {};
 
