@@ -92,6 +92,14 @@ router.patch(
     OrderControllers.progressOrderStatus
 );
 
+// Send invoice
+router.patch(
+    "/:orderId/send-invoice",
+    platformValidator,
+    auth("ADMIN"),
+    OrderControllers.sendInvoice
+);
+
 // Update job number
 router.patch(
     "/:id/job-number",
