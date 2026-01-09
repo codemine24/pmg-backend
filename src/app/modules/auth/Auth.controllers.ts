@@ -45,13 +45,13 @@ const forgotPassword = catchAsync(async (req, res) => {
   console.log(req)
   const platformId = (req as any).platformId;
 
-  const result = await AuthServices.forgotPassword(req.body, platformId);
+  const result = await AuthServices.forgotPassword(platformId, req.body);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: result.message,
-    data: null,
+    data: result.data || null,
   });
 });
 

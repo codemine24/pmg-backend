@@ -12,6 +12,8 @@ import { sendEmail } from "../../services/email.service";
 import { tokenGenerator } from "../../utils/jwt-helpers";
 import { ForgotPasswordPayload, LoginCredential, ResetPasswordPayload } from "./Auth.interfaces";
 import { OTPGenerator } from "../../utils/helper";
+import { emailTemplates } from "../../utils/email-templates";
+import { OTPVerifier } from "../../utils/otp-verifier";
 
 const login = async (credential: LoginCredential, platformId: string) => {
   const { email, password } = credential;
@@ -277,11 +279,12 @@ const forgotPassword = async (platformId: string, payload: ForgotPasswordPayload
       .where(
         and(
           eq(users.email, email),
-          eq(users.platform_id, platformId)
+          eq(users.platform_id, platformId),
+          eq(users.is_active, true)
         )
       );
 
-    if (!user || !user.is_active) {
+    if (!user) {
       throw new CustomizedError(httpStatus.NOT_FOUND, "Invalid email or user is not active");
     }
 
@@ -289,35 +292,62 @@ const forgotPassword = async (platformId: string, payload: ForgotPasswordPayload
     const generatedOTP = OTPGenerator();
     const expirationTime = new Date(new Date().getTime() + 5 * 60000);
 
-    // Step 2.3: Prepare and send OTP email
-    // const emailBody = OTPTemplate(String(generatedOTP));
-    // const emailResponse = await emailSender(
-    //   email,
-    //   emailBody,
-    //   "OTP for password reset"
-    // );
-
-    // if (!emailResponse?.accepted?.length) {
-    //   throw new CustomizedError(
-    //     httpStatus.INTERNAL_SERVER_ERROR,
-    //     "Failed to send OTP"
-    //   );
-    // }
+    // Step 2.3: Send OTP email
+    await sendEmail({
+      to: email,
+      subject: `OTP for password reset`,
+      html: emailTemplates.forgot_password_otp({
+        email,
+        otp: String(generatedOTP)
+      }),
+    })
 
     // Step 2.4: Save OTP record in the database
-    await db.insert(otp).values({
+    const [createdOtp] = await db.insert(otp).values({
       platform_id: platformId,
       email,
       otp: String(generatedOTP),
       expires_at: expirationTime,
-    });
+    }).returning();
 
     return {
       message: "OTP sent successfully",
+      data: {
+        email: createdOtp.email,
+        expires_at: createdOtp.expires_at,
+      }
     };
   }
 
-  // ✅ Step 4: Handle invalid request cases
+  // Step 3: Handle password reset using OTP
+  if (email && inputOtp && new_password) {
+    // Step 3.1: Verify OTP from database
+    await OTPVerifier(platformId, String(inputOtp), email);
+
+    // Step 3.2: Hash new password
+    const hashedPassword = await bcrypt.hash(
+      new_password,
+      Number(config.salt_rounds)
+    );
+
+    // Step 3.3: Update user password
+    await db.update(users).set({
+      password: hashedPassword,
+      updated_at: new Date(),
+    }).where(
+      and(
+        eq(users.email, email),
+        eq(users.platform_id, platformId)
+      )
+    );
+
+    return {
+      message: "Password reset successfully",
+      data: null,
+    };
+  }
+
+  // Step 4: Handle invalid request cases
   throw new CustomizedError(httpStatus.BAD_REQUEST, "Invalid request");
 };
 
