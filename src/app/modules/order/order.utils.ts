@@ -1,10 +1,11 @@
 import dayjs from "dayjs";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../../../db";
-import { financialStatusEnum, orderItems, orders, orderStatusEnum, scanEvents } from "../../../db/schema";
+import { assetBookings, assets, financialStatusEnum, orderItems, orders, orderStatusEnum, scanEvents } from "../../../db/schema";
 import { sortOrderType } from "../../constants/common";
 import { AuthUser } from "../../interface/common";
-import { OrderSubmittedEmailData, RecipientRole } from "./order.interfaces";
+import CustomizedError from "../../error/customized-error";
+import httpStatus from "http-status";
 
 // Sortable fields for order queries
 export const orderSortableFields: Record<string, any> = {
@@ -49,123 +50,6 @@ export const orderIdGenerator = async (): Promise<string> => {
 	const sequenceStr = sequence.toString().padStart(3, '0')
 	return `${prefix}${sequenceStr}`
 }
-
-// ----------------------------------- RENDER ORDER SUBMITTED EMAIL ---------------------------
-export const renderOrderSubmittedEmail = (
-	recipientRole: RecipientRole,
-	data: OrderSubmittedEmailData
-): string => {
-	const roleMessages = {
-		PLATFORM_ADMIN: {
-			greeting: "Platform Admin",
-			message: "A new order has been submitted and requires review.",
-			action: "Review this order in the admin dashboard and monitor the pricing workflow.",
-		},
-		LOGISTICS_STAFF: {
-			greeting: "Logistics Team",
-			message: "A new order has been submitted and requires pricing review.",
-			action: "Review the order details and provide pricing within 24-48 hours.",
-		},
-		CLIENT_USER: {
-			greeting: "Client",
-			message: "Your order has been successfully submitted.",
-			action:
-				"You will receive a quote via email within 24-48 hours. Track your order status in the dashboard.",
-		},
-	};
-
-	const roleMessage = roleMessages[recipientRole];
-
-	return `
-<!DOCTYPE html>
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Order Submitted: ${data.orderId}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Ubuntu, sans-serif; background-color: #f6f9fc;">
-	<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f6f9fc;">
-		<tr>
-			<td align="center" style="padding: 40px 20px;">
-				<table width="600" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
-					<!-- Header -->
-					<tr>
-						<td style="padding: 40px 40px 0;">
-							<h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #1f2937; line-height: 1.3;">Order Submitted</h1>
-						</td>
-					</tr>
-
-					<!-- Greeting -->
-					<tr>
-						<td style="padding: 16px 40px 0;">
-							<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151;">Hello ${roleMessage.greeting},</p>
-						</td>
-					</tr>
-
-					<!-- Message -->
-					<tr>
-						<td style="padding: 16px 40px 0;">
-							<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151;">${roleMessage.message}</p>
-						</td>
-					</tr>
-
-					<!-- Order Details Box -->
-					<tr>
-						<td style="padding: 24px 40px;">
-							<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f9fafb; border-radius: 8px;">
-								<tr>
-									<td style="padding: 24px;">
-										<p style="margin: 0 0 16px; font-size: 18px; font-weight: bold; color: #111827;">Order Details</p>
-										<hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 0 0 16px;">
-
-										<p style="margin: 8px 0; font-size: 14px; line-height: 1.6; color: #374151;">
-											<strong>Order ID:</strong> ${data.orderId}
-										</p>
-										<p style="margin: 8px 0; font-size: 14px; line-height: 1.6; color: #374151;">
-											<strong>Company:</strong> ${data.companyName}
-										</p>
-										<p style="margin: 8px 0; font-size: 14px; line-height: 1.6; color: #374151;">
-											<strong>Event Dates:</strong> ${data.eventStartDate} to ${data.eventEndDate}
-										</p>
-										<p style="margin: 8px 0; font-size: 14px; line-height: 1.6; color: #374151;">
-											<strong>Venue City:</strong> ${data.venueCity}
-										</p>
-										<p style="margin: 8px 0; font-size: 14px; line-height: 1.6; color: #374151;">
-											<strong>Total Volume:</strong> ${data.totalVolume} m³
-										</p>
-										<p style="margin: 8px 0; font-size: 14px; line-height: 1.6; color: #374151;">
-											<strong>Item Count:</strong> ${data.itemCount} items
-										</p>
-									</td>
-								</tr>
-							</table>
-						</td>
-					</tr>
-
-					<!-- Action Section -->
-					<tr>
-						<td style="padding: 0 40px 32px;">
-							<p style="margin: 0 0 16px; font-size: 16px; line-height: 1.6; color: #374151;">${roleMessage.action}</p>
-							<a href="${data.viewOrderUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; padding: 12px 32px; border-radius: 6px;">View Order</a>
-						</td>
-					</tr>
-
-					<!-- Footer -->
-					<tr>
-						<td style="padding: 32px 40px;">
-							<hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 0 0 32px;">
-							<p style="margin: 0; font-size: 12px; line-height: 1.5; color: #6b7280;">
-								This is an automated message from the Asset Fulfillment System. Please do not reply to this email.
-							</p>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
-</body>
-	`.trim();
-};
 
 // ----------------------------------- STATUS TRANSITIONS -------------------------------------
 export const VALID_STATE_TRANSITIONS: Record<string, string[]> = {
@@ -244,20 +128,6 @@ export const PREP_BUFFER_DAYS = 5;
 // Return buffer days (time needed after event for return and processing)
 export const RETURN_BUFFER_DAYS = 3;
 
-export function calculateBlockedPeriod(
-	eventStartDate: Date,
-	eventEndDate: Date,
-	refurbDays: number = 0
-): { blockedFrom: Date; blockedUntil: Date } {
-	// Total prep time = prep buffer + refurb time
-	const totalPrepDays = PREP_BUFFER_DAYS + refurbDays
-
-	const blockedFrom = dayjs(eventStartDate).subtract(totalPrepDays, 'day').toDate()
-	const blockedUntil = dayjs(eventEndDate).add(RETURN_BUFFER_DAYS, 'day').toDate()
-
-	return { blockedFrom, blockedUntil }
-}
-
 // ----------------------------------- VALIDATE INBOUND SCANNING COMPLETE ----------------------
 /**
  * Validates that all order items have been scanned in (inbound)
@@ -299,4 +169,122 @@ export async function validateInboundScanningComplete(
 
 	console.log(`✅ All items scanned in for order ${orderId}`);
 	return true;
+}
+
+export type UnavailableItem = {
+	asset_id: string;
+	asset_name: string;
+	requested: number;
+	available: number;
+	next_available_date?: Date;
+}
+
+// ----------------------------------- CHECK ASSETS FOR ORDER -----------------------------------
+export const checkAssetsForOrder = async (platformId: string, companyId: string, requiredAssets: { id: string, quantity: number }[], eventStartDate: Date, eventEndDate: Date) => {
+	const assetIds = requiredAssets.map((asset) => asset.id);
+
+	// Step 1: Verify assets exist and belong to the company
+	const foundAssets = await db
+		.select()
+		.from(assets)
+		.where(
+			and(
+				inArray(assets.id, assetIds),
+				eq(assets.company_id, companyId),
+				eq(assets.platform_id, platformId),
+				isNull(assets.deleted_at)
+			)
+		);
+
+	if (foundAssets.length !== assetIds.length) {
+		throw new CustomizedError(
+			httpStatus.NOT_FOUND,
+			"One or more assets not found or do not belong to your company"
+		);
+	}
+
+	// Step 2: Verify all assets have AVAILABLE status
+	const unavailableAssets = foundAssets.filter((a) => a.status !== "AVAILABLE");
+	if (unavailableAssets.length > 0) {
+		throw new CustomizedError(
+			httpStatus.BAD_REQUEST,
+			`Cannot order unavailable assets: ${unavailableAssets.map((a) => a.name).join(", ")}`
+		);
+	}
+
+	const unavailableItems: Array<UnavailableItem> = [];
+
+	// Step 3: Check date-based availability for requested quantities
+	for (const item of requiredAssets) {
+		// Find asset in the foundAssets array
+		const asset = foundAssets.find((a) => a.id === item.id);
+		if (!asset) {
+			throw new CustomizedError(
+				httpStatus.NOT_FOUND,
+				`Asset "${item.id}" not found`
+			);
+		}
+
+		// Query overlapping bookings for the event period
+		const overlappingBookings = await db.query.assetBookings.findMany({
+			where: and(
+				eq(assetBookings.asset_id, item.id),
+				sql`${assetBookings.blocked_from} <= ${eventStartDate}`,
+				sql`${assetBookings.blocked_until} >= ${eventEndDate}`
+			),
+			with: {
+				order: {
+					columns: {
+						id: true,
+						order_id: true,
+					},
+				},
+			},
+		});
+
+		// Calculate available quantity
+		const bookedQuantity = overlappingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+		const availableQuantity = Math.max(0, item.quantity - bookedQuantity);
+
+		// If insufficient quantity, track for error message
+		if (availableQuantity < item.quantity) {
+			// Find next available date from latest booking end
+			let nextAvailableDate: Date | undefined;
+			if (overlappingBookings.length > 0) {
+				const latestBookingEnd = new Date(
+					Math.max(...overlappingBookings.map(b => new Date(b.blocked_until).getTime()))
+				);
+				nextAvailableDate = new Date(latestBookingEnd);
+				nextAvailableDate.setDate(nextAvailableDate.getDate() + 1);
+			}
+
+			unavailableItems.push({
+				asset_id: item.id,
+				asset_name: asset.name,
+				requested: item.quantity,
+				available: availableQuantity,
+				next_available_date: nextAvailableDate,
+			});
+		}
+	}
+
+	// Step 4: Throw error if any items are unavailable
+	if (unavailableItems.length > 0) {
+		const unavailableList = unavailableItems
+			.map(({ asset_name, requested, available, next_available_date }) => {
+				const nextDate = next_available_date
+					? ` (available from ${new Date(next_available_date).toLocaleDateString()})`
+					: "";
+
+				return `${asset_name}: requested ${requested}, available ${available} ${nextDate}`;
+			})
+			.join("; ");
+
+		throw new CustomizedError(
+			httpStatus.BAD_REQUEST,
+			`Insufficient availability for requested dates: ${unavailableList}`
+		);
+	}
+
+	return foundAssets;
 }

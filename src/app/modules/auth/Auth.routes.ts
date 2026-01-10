@@ -4,6 +4,8 @@ import platformValidator from "../../middleware/platform-validator";
 import { AuthControllers } from "./Auth.controllers";
 import { AuthSchemas } from "./Auth.schemas";
 import auth from "../../middleware/auth";
+import requirePermission from "../../middleware/permission";
+import { PERMISSIONS } from "../../constants/permissions";
 
 const router = Router();
 
@@ -23,6 +25,7 @@ router.post(
   "/reset-password",
   platformValidator,
   auth("ADMIN", "LOGISTICS", "CLIENT"),
+  requirePermission(PERMISSIONS.AUTH_RESET_PASSWORD),
   payloadValidator(AuthSchemas.resetPasswordValidationSchema),
   AuthControllers.resetPassword
 );

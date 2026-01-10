@@ -31,6 +31,7 @@ router.get(
     "/export",
     platformValidator,
     auth("ADMIN", "LOGISTICS"),
+    requirePermission(PERMISSIONS.ORDERS_EXPORT),
     OrderControllers.exportOrders
 );
 
@@ -48,6 +49,7 @@ router.get(
     "/pricing-review",
     platformValidator,
     auth("ADMIN"),
+    requirePermission(PERMISSIONS.PRICING_REVIEW),
     OrderControllers.getPricingReviewOrders
 );
 
@@ -67,11 +69,22 @@ router.get(
     OrderControllers.getOrderPricingDetails
 );
 
+// Submit order
+router.post(
+    "/submit-from-cart",
+    platformValidator,
+    auth("CLIENT"),
+    requirePermission(PERMISSIONS.ORDERS_CREATE),
+    payloadValidator(orderSchemas.submitOrderSchema),
+    OrderControllers.submitOrder
+);
+
 // Approve quote
 router.patch(
     "/:id/approve-quote",
     platformValidator,
     auth("CLIENT"),
+    requirePermission(PERMISSIONS.QUOTES_APPROVE),
     payloadValidator(orderSchemas.approveQuoteSchema),
     OrderControllers.approveQuote
 );
@@ -81,6 +94,7 @@ router.patch(
     "/:id/decline-quote",
     platformValidator,
     auth("CLIENT"),
+    requirePermission(PERMISSIONS.QUOTES_DECLINE),
     payloadValidator(orderSchemas.declineQuoteSchema),
     OrderControllers.declineQuote
 );
@@ -108,6 +122,7 @@ router.patch(
     "/:id/job-number",
     platformValidator,
     auth("ADMIN", "LOGISTICS"),
+    requirePermission(PERMISSIONS.ORDERS_ADD_JOB_NUMBER),
     payloadValidator(orderSchemas.updateJobNumberSchema),
     OrderControllers.updateJobNumber
 );
@@ -117,6 +132,7 @@ router.patch(
     "/:id/time-windows",
     platformValidator,
     auth("ADMIN", "LOGISTICS"),
+    requirePermission(PERMISSIONS.ORDERS_ADD_TIME_WINDOWS),
     payloadValidator(orderSchemas.updateTimeWindowsSchema),
     OrderControllers.updateTimeWindows
 );
@@ -126,6 +142,7 @@ router.get(
     "/:id/status-history",
     platformValidator,
     auth("ADMIN", "LOGISTICS", "CLIENT"),
+    requirePermission(PERMISSIONS.ORDERS_VIEW_STATUS_HISTORY),
     OrderControllers.getOrderStatusHistory
 );
 
@@ -142,6 +159,7 @@ router.patch(
     "/:id/adjust-pricing",
     platformValidator,
     auth("ADMIN", "LOGISTICS"),
+    requirePermission(PERMISSIONS.PRICING_ADJUST),
     payloadValidator(orderSchemas.adjustLogisticsPricingSchema),
     OrderControllers.adjustLogisticsPricing
 );
@@ -151,6 +169,7 @@ router.patch(
     "/:id/approve-standard-pricing",
     platformValidator,
     auth("ADMIN", "LOGISTICS"),
+    requirePermission(PERMISSIONS.PRICING_APPROVE_STANDARD),
     payloadValidator(orderSchemas.approveStandardPricingSchema),
     OrderControllers.approveStandardPricing
 );
@@ -160,17 +179,9 @@ router.patch(
     "/:id/approve-platform-pricing",
     platformValidator,
     auth("ADMIN"),
+    requirePermission(PERMISSIONS.PRICING_ADMIN_APPROVE),
     payloadValidator(orderSchemas.approvePlatformPricingSchema),
     OrderControllers.approvePlatformPricing
-);
-
-// Submit order
-router.post(
-    "/submit-from-cart",
-    platformValidator,
-    auth("CLIENT"),
-    payloadValidator(orderSchemas.submitOrderSchema),
-    OrderControllers.submitOrder
 );
 
 export const OrderRoutes = router;

@@ -4,6 +4,8 @@ import payloadValidator from "../../middleware/payload-validator";
 import platformValidator from "../../middleware/platform-validator";
 import { UserControllers } from "./user.controllers";
 import { UserSchemas } from "./user.schemas";
+import requirePermission from "../../middleware/permission";
+import { PERMISSIONS } from "../../constants/permissions";
 
 const router = Router();
 
@@ -12,6 +14,7 @@ router.post(
   "/",
   platformValidator,
   auth('ADMIN'),
+  requirePermission(PERMISSIONS.USERS_CREATE),
   payloadValidator(UserSchemas.createUser),
   UserControllers.createUser
 );
@@ -21,6 +24,7 @@ router.get(
   "/",
   platformValidator,
   auth('ADMIN', 'LOGISTICS'),
+  requirePermission(PERMISSIONS.USERS_READ),
   UserControllers.getUsers
 );
 

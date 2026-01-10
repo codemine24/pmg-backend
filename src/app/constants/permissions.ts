@@ -1,113 +1,103 @@
-/**
- * Permission Constants
- * 
- * Naming Convention: {module}:{action}
- * Examples: auth:login, orders:create, assets:read
- * 
- * This file defines all available permissions in the system.
- * Each permission should be added to the user's permissions array to grant access.
- */
-
 export const PERMISSIONS = {
     // ==================== AUTHENTICATION ====================
-    AUTH_LOGIN: 'auth:login',
-    AUTH_RESET_PASSWORD: 'auth:reset_password',
+    AUTH_LOGIN: 'auth:login', // TODO: Need to use another method
+    AUTH_RESET_PASSWORD: 'auth:reset_password', // ✅
     AUTH_ALL: 'auth:*',
 
     // ==================== USER MANAGEMENT ====================
-    USERS_CREATE: 'users:create',
-    USERS_READ: 'users:read',
+    USERS_CREATE: 'users:create', // ✅
+    USERS_READ: 'users:read', // ✅
     USERS_ALL: 'users:*',
 
     // ==================== COMPANY MANAGEMENT ====================
-    COMPANIES_CREATE: 'companies:create',
-    COMPANIES_READ: 'companies:read',
-    COMPANIES_UPDATE: 'companies:update',
-    COMPANIES_ARCHIVE: 'companies:archive',
+    COMPANIES_CREATE: 'companies:create', // ✅
+    COMPANIES_READ: 'companies:read', // ✅
+    COMPANIES_UPDATE: 'companies:update', // ✅
+    COMPANIES_ARCHIVE: 'companies:archive', // ✅
     COMPANIES_SET_MARGIN: 'companies:set_margin',
     COMPANIES_ALL: 'companies:*',
 
     // ==================== WAREHOUSE MANAGEMENT ====================
-    WAREHOUSES_CREATE: 'warehouses:create',
-    WAREHOUSES_READ: 'warehouses:read',
-    WAREHOUSES_UPDATE: 'warehouses:update',
-    WAREHOUSES_ARCHIVE: 'warehouses:archive',
+    WAREHOUSES_CREATE: 'warehouses:create', // ✅
+    WAREHOUSES_READ: 'warehouses:read', // ✅
+    WAREHOUSES_UPDATE: 'warehouses:update', // ✅
+    WAREHOUSES_ARCHIVE: 'warehouses:archive', // ✅
     WAREHOUSES_ALL: 'warehouses:*',
 
     // ==================== ZONE MANAGEMENT ====================
-    ZONES_CREATE: 'zones:create',
-    ZONES_READ: 'zones:read',
-    ZONES_UPDATE: 'zones:update',
-    ZONES_DELETE: 'zones:delete',
+    ZONES_CREATE: 'zones:create', // ✅
+    ZONES_READ: 'zones:read', // ✅
+    ZONES_UPDATE: 'zones:update', // ✅
+    ZONES_DELETE: 'zones:delete', // ✅
     ZONES_ASSIGN_COMPANY: 'zones:assign_company',
     ZONES_ALL: 'zones:*',
 
     // ==================== BRAND MANAGEMENT ====================
-    BRANDS_CREATE: 'brands:create',
-    BRANDS_READ: 'brands:read',
-    BRANDS_UPDATE: 'brands:update',
-    BRANDS_DELETE: 'brands:delete',
+    BRANDS_CREATE: 'brands:create', // ✅
+    BRANDS_READ: 'brands:read', // ✅
+    BRANDS_UPDATE: 'brands:update', // ✅
+    BRANDS_DELETE: 'brands:delete', // ✅
     BRANDS_ALL: 'brands:*',
 
     // ==================== ASSET MANAGEMENT ====================
-    ASSETS_CREATE: 'assets:create',
-    ASSETS_READ: 'assets:read',
-    ASSETS_UPDATE: 'assets:update',
-    ASSETS_DELETE: 'assets:delete',
-    ASSETS_GENERATE_QR: 'assets:generate_qr',
+    ASSETS_CREATE: 'assets:create', // ✅
+    ASSETS_READ: 'assets:read', // ✅
+    ASSETS_UPDATE: 'assets:update', // ✅
+    ASSETS_DELETE: 'assets:delete', // ✅
+    ASSETS_GENERATE_QR: 'assets:generate_qr', // ✅
     ASSETS_UPLOAD_PHOTOS: 'assets:upload_photos',
     ASSETS_ALL: 'assets:*',
 
     // ==================== COLLECTION MANAGEMENT ====================
-    COLLECTIONS_CREATE: 'collections:create',
-    COLLECTIONS_READ: 'collections:read',
-    COLLECTIONS_UPDATE: 'collections:update',
-    COLLECTIONS_DELETE: 'collections:delete',
-    COLLECTIONS_ASSIGN_ASSETS: 'collections:assign_assets',
+    COLLECTIONS_CREATE: 'collections:create', // ✅
+    COLLECTIONS_READ: 'collections:read', // ✅
+    COLLECTIONS_UPDATE: 'collections:update', // ✅
+    COLLECTIONS_DELETE: 'collections:delete', // ✅
+    COLLECTIONS_ASSIGN_ASSETS: 'collections:assign_assets', // ✅
     COLLECTIONS_ALL: 'collections:*',
 
     // ==================== PRICING CONFIGURATION ====================
-    PRICING_TIERS_CREATE: 'pricing_tiers:create',
-    PRICING_TIERS_READ: 'pricing_tiers:read',
-    PRICING_TIERS_UPDATE: 'pricing_tiers:update',
+    PRICING_TIERS_CREATE: 'pricing_tiers:create', // ✅
+    PRICING_TIERS_READ: 'pricing_tiers:read', // ✅
+    PRICING_TIERS_UPDATE: 'pricing_tiers:update', // ✅
     PRICING_TIERS_ACTIVATE: 'pricing_tiers:activate',
     PRICING_TIERS_DEACTIVATE: 'pricing_tiers:deactivate',
     PRICING_TIERS_ALL: 'pricing_tiers:*',
 
     // ==================== PRICING REVIEW ====================
-    PRICING_REVIEW: 'pricing:review',
-    PRICING_APPROVE_STANDARD: 'pricing:approve_standard',
-    PRICING_ADJUST: 'pricing:adjust',
-    PRICING_ADMIN_REVIEW_ADJUSTMENT: 'pricing:admin_review_adjustment',
+    PRICING_REVIEW: 'pricing:review', // ✅
+    PRICING_APPROVE_STANDARD: 'pricing:approve_standard', // ✅
+    PRICING_ADJUST: 'pricing:adjust', // ✅
+    PRICING_ADMIN_REVIEW_ADJUSTMENT: 'pricing:admin_review_adjustment', // ✅
     PRICING_ADMIN_APPROVE: 'pricing:admin_approve',
     PRICING_ALL: 'pricing:*',
 
     // ==================== ORDER MANAGEMENT ====================
-    ORDERS_CREATE: 'orders:create',
-    ORDERS_READ: 'orders:read',
+    ORDERS_CREATE: 'orders:create', // ✅
+    ORDERS_READ: 'orders:read', // ✅
     ORDERS_UPDATE: 'orders:update',
-    ORDERS_ADD_JOB_NUMBER: 'orders:add_job_number',
-    ORDERS_ADD_TIME_WINDOWS: 'orders:add_time_windows',
-    ORDERS_VIEW_STATUS_HISTORY: 'orders:view_status_history',
-    ORDERS_EXPORT: 'orders:export',
+    ORDERS_ADD_JOB_NUMBER: 'orders:add_job_number', // ✅
+    ORDERS_ADD_TIME_WINDOWS: 'orders:add_time_windows', // ✅
+    ORDERS_VIEW_STATUS_HISTORY: 'orders:view_status_history', // ✅
+    ORDERS_EXPORT: 'orders:export', // ✅
     ORDERS_ALL: 'orders:*',
 
     // ==================== QUOTES ====================
-    QUOTES_APPROVE: 'quotes:approve',
-    QUOTES_DECLINE: 'quotes:decline',
+    QUOTES_APPROVE: 'quotes:approve', // ✅
+    QUOTES_DECLINE: 'quotes:decline', // ✅
     QUOTES_ALL: 'quotes:*',
 
     // ==================== INVOICING ====================
-    INVOICES_GENERATE: 'invoices:generate',
-    INVOICES_READ: 'invoices:read',
-    INVOICES_DOWNLOAD: 'invoices:download',
-    INVOICES_CONFIRM_PAYMENT: 'invoices:confirm_payment',
+    INVOICES_GENERATE: 'invoices:generate', // ✅
+    INVOICES_READ: 'invoices:read', // ✅
+    INVOICES_DOWNLOAD: 'invoices:download', // TODO: Need to use another method
+    INVOICES_CONFIRM_PAYMENT: 'invoices:confirm_payment', // ✅
     INVOICES_TRACK_PAYMENT_STATUS: 'invoices:track_payment_status',
     INVOICES_ALL: 'invoices:*',
 
     // ==================== QR SCANNING ====================
-    SCANNING_SCAN_OUT: 'scanning:scan_out',
-    SCANNING_SCAN_IN: 'scanning:scan_in',
+    SCANNING_SCAN_OUT: 'scanning:scan_out', // ✅
+    SCANNING_SCAN_IN: 'scanning:scan_in', // ✅
     SCANNING_CAPTURE_TRUCK_PHOTOS: 'scanning:capture_truck_photos',
     SCANNING_ALL: 'scanning:*',
 
@@ -118,10 +108,10 @@ export const PERMISSIONS = {
     INVENTORY_ALL: 'inventory:*',
 
     // ==================== CONDITION MANAGEMENT ====================
-    CONDITIONS_UPDATE: 'conditions:update',
-    CONDITIONS_VIEW_HISTORY: 'conditions:view_history',
-    CONDITIONS_VIEW_ITEMS_NEEDING_ATTENTION: 'conditions:view_items_needing_attention',
-    CONDITIONS_COMPLETE_MAINTENANCE: 'conditions:complete_maintenance',
+    CONDITIONS_UPDATE: 'conditions:update', // ✅
+    CONDITIONS_VIEW_HISTORY: 'conditions:view_history', // ✅
+    CONDITIONS_VIEW_ITEMS_NEEDING_ATTENTION: 'conditions:view_items_needing_attention', // ✅
+    CONDITIONS_COMPLETE_MAINTENANCE: 'conditions:complete_maintenance', // ✅
     CONDITIONS_ALL: 'conditions:*',
 
     // ==================== LIFECYCLE & NOTIFICATIONS ====================
@@ -133,9 +123,9 @@ export const PERMISSIONS = {
     NOTIFICATIONS_ALL: 'notifications:*',
 
     // ==================== ANALYTICS ====================
-    ANALYTICS_VIEW_REVENUE: 'analytics:view_revenue',
-    ANALYTICS_TRACK_MARGIN: 'analytics:track_margin',
-    ANALYTICS_FILTER_BY_COMPANY: 'analytics:filter_by_company',
+    ANALYTICS_VIEW_REVENUE: 'analytics:view_revenue', // ✅
+    ANALYTICS_TRACK_MARGIN: 'analytics:track_margin', // ✅
+    ANALYTICS_FILTER_BY_COMPANY: 'analytics:filter_by_company', // ✅
     ANALYTICS_ALL: 'analytics:*',
 };
 
