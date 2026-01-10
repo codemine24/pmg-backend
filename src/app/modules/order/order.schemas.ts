@@ -32,7 +32,7 @@ const submitOrderSchema = z.object({
         contact_email: z.string("Contact email is required").email("Invalid email format").max(255),
         contact_phone: z.string("Contact phone is required").min(1, "Contact phone is required").max(50),
         special_instructions: z.string("Special instructions should be a text").optional(),
-    }),
+    }).strict(),
 });
 
 const updateJobNumberSchema = z.object({

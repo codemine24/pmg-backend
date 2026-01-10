@@ -34,7 +34,6 @@ import { NotificationLogServices } from "../notification-logs/notification-logs.
 import { getNotificationTypeForTransition } from "../notification-logs/notification-logs.utils";
 import { orderIdGenerator, renderOrderSubmittedEmail } from "./order.utils";
 import { uuidRegex } from "../../constants/common";
-import { invoiceGenerator } from "../../utils/invoice";
 import { costEstimateGenerator } from "../../utils/cost-estimate";
 import { getPlatformAdminEmails } from "../../utils/helper-query";
 import config from "../../config";
