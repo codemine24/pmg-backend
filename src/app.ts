@@ -1,10 +1,13 @@
 import cookiePerser from "cookie-parser";
-import cors from "cors";
 import express, { Application, Request, Response } from "express";
 import httpStatus from "http-status";
 import config from "./app/config";
 import globalErrorHandler from "./app/middleware/global-error-handler";
 import notFoundHandler from "./app/middleware/not-found-handler";
+import {
+  corsMiddleware,
+  corsPreflightHandler,
+} from "./app/middleware/cors";
 import router from "./app/routes";
 import swaggerRoutes from "./app/routes/swagger.routes";
 
@@ -16,26 +19,44 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookiePerser());
 
 // =====================
-// CORS (Vercel + JWT SAFE)
+// CORS (Database-driven, Multi-tenant)
 // =====================
+// Handles dynamic CORS for:
+// - Platform subdomains (admin.xyz.com, warehouse.xyz.com, client.xyz.com)
+// - Custom company domains (diageo.com, etc.)
+// - Development origins (localhost:3000, etc.)
+// Origins are cached for 1 minute and fetched from platforms & companyDomains tables
+
+// CRITICAL: Set headers to prevent Vercel Edge/CDN from caching responses with wrong origin
+// This middleware runs BEFORE cors middleware to ensure headers are set first
 app.use((req, res, next) => {
-  res.header("Vary", "Origin");
+  // Tell caches to vary response by Origin - different origins = different cached responses
+  res.header("Vary", "Origin, Accept-Encoding");
+
+  // Disable ALL caching at Vercel CDN/Edge level
+  res.header("CDN-Cache-Control", "no-store");
+  res.header("Vercel-CDN-Cache-Control", "no-store");
+
+  // Disable browser/proxy caching of API responses
+  res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+  res.header("Pragma", "no-cache");
+  res.header("Expires", "0");
+  res.header("Surrogate-Control", "no-store");
+
   next();
 });
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman / server-side
-      callback(null, origin); // allow all domains dynamically
-    },
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-platform"],
-  })
-);
+app.use(corsMiddleware);
 
 // Handle preflight BEFORE routes
-app.options("/{*path}", cors());
+// Add Cache-Control to prevent CDN from caching preflight responses with wrong origin
+app.options("/{*path}", (req, res, next) => {
+  // Prevent CDN caching of preflight - each origin needs its own response
+  res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.header("Pragma", "no-cache");
+  res.header("Expires", "0");
+  next();
+}, corsPreflightHandler);
 
 // test server
 app.get("/", (req: Request, res: Response) => {
