@@ -1,5 +1,4 @@
 import bcrypt from "bcrypt";
-import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
 import httpStatus from "http-status";
 import { Secret } from "jsonwebtoken";
@@ -160,7 +159,7 @@ const getConfigByHostname = async (origin: string) => {
         config: platforms.config,
       })
       .from(platforms)
-      .where(eq(platforms.domain, url.host))
+      .where(eq(platforms.domain, url.host || url.href))
       .limit(1);
 
     if (platform) {
@@ -186,7 +185,7 @@ const getConfigByHostname = async (origin: string) => {
       })
       .from(companyDomains)
       .innerJoin(companies, eq(companyDomains.company_id, companies.id))
-      .where(eq(companyDomains.hostname, url.host))
+      .where(eq(companyDomains.hostname, url.host || url.href))
       .limit(1);
 
     if (result) {
