@@ -8,6 +8,8 @@ export const PERMISSIONS = {
     USERS_CREATE: 'users:create', // ✅
     USERS_READ: 'users:read', // ✅
     USERS_ALL: 'users:*',
+    USERS_UPDATE: 'users:update', // ✅
+    USERS_DEACTIVATE: 'users:deactivate', // ✅
 
     // ==================== COMPANY MANAGEMENT ====================
     COMPANIES_CREATE: 'companies:create', // ✅
