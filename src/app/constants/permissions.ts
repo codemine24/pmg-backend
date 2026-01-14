@@ -60,8 +60,8 @@ export const PERMISSIONS = {
     PRICING_TIERS_CREATE: 'pricing_tiers:create', // ✅
     PRICING_TIERS_READ: 'pricing_tiers:read', // ✅
     PRICING_TIERS_UPDATE: 'pricing_tiers:update', // ✅
-    PRICING_TIERS_ACTIVATE: 'pricing_tiers:activate',
-    PRICING_TIERS_DEACTIVATE: 'pricing_tiers:deactivate',
+    PRICING_TIERS_ACTIVATE: 'pricing_tiers:activate', // ✅
+    PRICING_TIERS_DEACTIVATE: 'pricing_tiers:deactivate', // ✅
     PRICING_TIERS_ALL: 'pricing_tiers:*',
 
     // ==================== PRICING REVIEW ====================
@@ -69,7 +69,7 @@ export const PERMISSIONS = {
     PRICING_APPROVE_STANDARD: 'pricing:approve_standard', // ✅
     PRICING_ADJUST: 'pricing:adjust', // ✅
     PRICING_ADMIN_REVIEW_ADJUSTMENT: 'pricing:admin_review_adjustment', // ✅
-    PRICING_ADMIN_APPROVE: 'pricing:admin_approve',
+    PRICING_ADMIN_APPROVE: 'pricing:admin_approve', // ✅
     PRICING_ALL: 'pricing:*',
 
     // ==================== ORDER MANAGEMENT ====================

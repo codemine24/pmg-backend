@@ -57,10 +57,11 @@ const getUserById = catchAsync(async (req, res, next) => {
 
 // ----------------------------------- UPDATE USER ------------------------------------
 const updateUser = catchAsync(async (req, res, next) => {
+  const user = (req as any).user;
   const platformId = (req as any).platformId;
   const { id } = req.params;
 
-  const result = await UserServices.updateUser(id, platformId, req.body);
+  const result = await UserServices.updateUser(id, platformId, req.body, user);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
