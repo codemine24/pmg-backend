@@ -1,6 +1,6 @@
 export const PERMISSIONS = {
     // ==================== AUTHENTICATION ====================
-    AUTH_LOGIN: 'auth:login', // TODO: Need to use another method
+    AUTH_LOGIN: 'auth:login', // ✅
     AUTH_RESET_PASSWORD: 'auth:reset_password', // ✅
     AUTH_ALL: 'auth:*',
 
@@ -16,7 +16,7 @@ export const PERMISSIONS = {
     COMPANIES_READ: 'companies:read', // ✅
     COMPANIES_UPDATE: 'companies:update', // ✅
     COMPANIES_ARCHIVE: 'companies:archive', // ✅
-    COMPANIES_SET_MARGIN: 'companies:set_margin',
+    COMPANIES_SET_MARGIN: 'companies:set_margin', // ✅
     COMPANIES_ALL: 'companies:*',
 
     // ==================== WAREHOUSE MANAGEMENT ====================
@@ -31,7 +31,7 @@ export const PERMISSIONS = {
     ZONES_READ: 'zones:read', // ✅
     ZONES_UPDATE: 'zones:update', // ✅
     ZONES_DELETE: 'zones:delete', // ✅
-    ZONES_ASSIGN_COMPANY: 'zones:assign_company',
+    ZONES_ASSIGN_COMPANY: 'zones:assign_company', // ✅
     ZONES_ALL: 'zones:*',
 
     // ==================== BRAND MANAGEMENT ====================
@@ -62,8 +62,8 @@ export const PERMISSIONS = {
     PRICING_TIERS_CREATE: 'pricing_tiers:create', // ✅
     PRICING_TIERS_READ: 'pricing_tiers:read', // ✅
     PRICING_TIERS_UPDATE: 'pricing_tiers:update', // ✅
-    PRICING_TIERS_ACTIVATE: 'pricing_tiers:activate',
-    PRICING_TIERS_DEACTIVATE: 'pricing_tiers:deactivate',
+    PRICING_TIERS_ACTIVATE: 'pricing_tiers:activate', // ✅
+    PRICING_TIERS_DEACTIVATE: 'pricing_tiers:deactivate', // ✅
     PRICING_TIERS_ALL: 'pricing_tiers:*',
 
     // ==================== PRICING REVIEW ====================
@@ -71,7 +71,7 @@ export const PERMISSIONS = {
     PRICING_APPROVE_STANDARD: 'pricing:approve_standard', // ✅
     PRICING_ADJUST: 'pricing:adjust', // ✅
     PRICING_ADMIN_REVIEW_ADJUSTMENT: 'pricing:admin_review_adjustment', // ✅
-    PRICING_ADMIN_APPROVE: 'pricing:admin_approve',
+    PRICING_ADMIN_APPROVE: 'pricing:admin_approve', // ✅
     PRICING_ALL: 'pricing:*',
 
     // ==================== ORDER MANAGEMENT ====================
